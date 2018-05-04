@@ -15,17 +15,28 @@ var io = require('socket.io-client');
 
 // example code from mr doob : http://mrdoob.com/lab/javascript/requestanimationframe/
 
+var cellsize = 20;
+
 var board = {
-    width: 100,
-    height: 75,
+    width: 30,
+    height: 30,
 };
+var view = {
+    width: 10,
+    height: 10,
+};
+
 var canvas;
-var context;
+var canvas_ctx;
 var count = 0;
+var viewport;
 
 var direction = {stopped: -1, up: 1, down: 2, left: 3, right: 4};
 
-var player = {
+var players = [];
+
+for (x=0;x<1;x++) {
+players.push({
     dir: direction.up,
     position: {
 	x: Math.floor(board.width / 2),
@@ -38,15 +49,11 @@ var player = {
     },
     shade_delta : {
 	r: 1,
-	g: 2,
-	b: 3,
+	g: 0,
+	b: 0,
     },
-};
-
-var players = [];
-
-players.push(clone(player),clone(player),clone(player));
-
+});
+}
 var direction_delta = {stopped: { x: 0,  y: 0  },
 		       up:      { x: 0,  y: -1 },
 		       down:    { x: 0,  y: 1  },
@@ -54,42 +61,97 @@ var direction_delta = {stopped: { x: 0,  y: 0  },
 		       right:   { x: 1,  y: 0  },
 		      };
 
-var cellsize = 10;
-
 init();
 animate();
 
 function init() {
 
+    test = document.createElement( 'canvas' );
+    test.width = board.width * cellsize;
+    test.height = board.height * cellsize;
+    test_ctx = test.getContext( '2d' );
+    test_ctx.translate(test.width,test.height);
+    test_ctx.rotate(Math.PI/5);
+    draw_axes(test_ctx);
+    
+
     canvas = document.createElement( 'canvas' );
-    canvas.width = 1000;
-    canvas.height = 750;
+    canvas.width = board.width * cellsize;
+    canvas.height = board.height * cellsize;
+    canvas_ctx = canvas.getContext( '2d' );
 
-    context = canvas.getContext( '2d' );
+    viewport = document.createElement( 'canvas' );
+    viewport.width = view.width * cellsize;
+    viewport.height = view.height * cellsize;
+    viewport_ctx = viewport.getContext( '2d' );
 
-    context.strokeStyle = 'rgb(25,25,25)';
+    viewport_ctx.strokeRect(0,0,viewport_ctx.canvas.width,viewport_ctx.canvas.height);
+    viewport_ctx.imageSmoothingEnabled = false;
 
+    canvas_ctx.strokeStyle = 'rgb(25,25,25)';
+
+    document.body.appendChild( test );
+    document.body.appendChild( viewport );
     document.body.appendChild( canvas );
 
-    context.beginPath();
-    for (x = 0; x < board.width; x++) {
-	context.moveTo(x*cellsize,0);
-	context.lineTo(x*cellsize,board.height*cellsize);
+    canvas_ctx.beginPath();
+    for (x = 0; x <= board.width; x++) {
+	canvas_ctx.moveTo(x*cellsize,0);
+	canvas_ctx.lineTo(x*cellsize,board.height*cellsize);
     }
-    for (y = 0; y < board.height; y++) {
-	context.moveTo(0,y*cellsize);
-	context.lineTo(board.width*cellsize,y*cellsize);
+    for (y = 0; y <= board.height; y++) {
+	canvas_ctx.moveTo(0,y*cellsize);
+	canvas_ctx.lineTo(board.width*cellsize,y*cellsize);
     }
-    context.stroke();
+    canvas_ctx.stroke();
 
 }
 
+function draw_axes(ctx) {
+    for (x = -1000; x <= 1000; x+=10) {
+	ctx.beginPath();
+	ctx.moveTo(x,-1000);
+	if (x < 0) {
+	    ctx.strokeStyle = 'rgb(255,0,0)';
+	    }
+	else if (x > 0) {
+	    ctx.strokeStyle = 'rgb(0,255,0)';
+	}
+	else {
+	    ctx.strokeStyle = 'rgb(0,0,0)';
+	}
+	ctx.lineTo(x,1000);
+	ctx.closePath();
+	ctx.stroke();
+    }
+    for (y = -1000; y <= 1000; y+=10) {
+	ctx.beginPath();
+	ctx.moveTo(-1000,y);
+	if (y < 0) {
+	    ctx.strokeStyle = 'rgb(255,0,0)';
+	    }
+	else if (y > 0) {
+	    ctx.strokeStyle = 'rgb(0,255,0)';
+	}
+	else {
+	    ctx.strokeStyle = 'rgb(0,0,0)';
+	}
+	ctx.lineTo(1000,y);
+	ctx.closePath();
+	ctx.stroke();
+    }
+}
+
+
 function animate() {
     requestAnimFrame( animate );
-    for (var player in players) {
-	draw(player);
+    for (x=0 ; x<1; x++) {
+	for (var i in players) {
+	    move_player(players[i]);
+	    draw_player(players[i]);
+	}
     }
-
+    update_viewport(players[0]);
 }
 
 function turn_right(dir) {
@@ -120,7 +182,7 @@ function turn_left(dir) {
     return direction.stopped;
 }
 
-function draw(p) {
+function move_player(p) {
 
     var delta = {
 	x: 0,
@@ -129,10 +191,10 @@ function draw(p) {
     
     var rnd = Math.random();
 
-    if (rnd < 0.1) {
+    if (rnd < 0.05) {
 	p.dir = turn_left(p.dir);
     }
-    else if (rnd < 0.2) {
+    else if (rnd < 0.10) {
 	p.dir = turn_right(p.dir);
     }
 	
@@ -171,27 +233,99 @@ function draw(p) {
     }
 
     if (p.position.x >= board.width) {
-	p.position.x = board.width;
+	p.position.x = board.width - 1;
     }
 
     if (p.position.y >= board.height) {
-	p.position.y = board.height;
+	p.position.y = board.height - 1;
     }
+}
 
-    var color = 'rgb('+p.shade.r+','+p.shade.g+','+p.shade.b+')';
+function direction_to_rotation(dir) {
+    switch (dir) {
+    case direction.up:
+	return 0;
+    case direction.right:
+	return Math.PI/2;
+    case direction.left:
+	return Math.PI*3/2;
+    case direction.down:
+	return Math.PI;
+    default:
+	return 0;
+    }
+}
 
-    context.fillStyle = color;
+function old_update_viewport(p) {
+    viewport_ctx.resetTransform();
+    viewport_ctx.clearRect(0, 0, viewport_ctx.canvas.width, viewport_ctx.canvas.height);
+//    viewport_ctx.rotate(Math.PI/10*(count++%20));
+    viewport_ctx.drawImage(canvas,0,0);
+}
+
+function update_viewport(p) {
+    var width = board.width;
+    var height = board.height;
+
+    var x = p.position.x - view.width/2;
+    var y = p.position.y - view.height/2;
+
+    if (x < 0) {
+	x = 0;
+	}
+
+    if (y < 0) {
+	y = 0;
+	}
+
+    viewport_ctx.resetTransform();
+    viewport_ctx.clearRect( 0, 0, viewport_ctx.canvas.width, viewport_ctx.canvas.height);
+    viewport_ctx.strokeRect(0, 0, viewport_ctx.canvas.width, viewport_ctx.canvas.height);
+    viewport_ctx.strokeStyle = 'rgb(0,0,0)';
+
+    // Clip out the portion of the canvas corresponding to where the player is on the board;
+
+    var x_pixel = x * cellsize;
+    var y_pixel = y * cellsize;
+
+    var width_pixel = viewport_ctx.canvas.width;
+    var height_pixel = viewport_ctx.canvas.height;
+
+    var rotation = direction_to_rotation(p.dir);
+
+    console.log("X "+x_pixel+" Y "+x_pixel+" Width "+width_pixel+" Height "+height_pixel);
+
+    if (p.dir == direction.up) {
+	viewport_ctx.drawImage(canvas,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
+    }
+    else if (p.dir == direction.left) {
+	viewport_ctx.translate(width_pixel,0);
+	viewport_ctx.rotate(Math.PI/2);
+	viewport_ctx.drawImage(canvas,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
+    }
+    else if (p.dir == direction.right) {
+	viewport_ctx.translate(0,height_pixel);
+	viewport_ctx.rotate(3*Math.PI/2);
+	viewport_ctx.drawImage(canvas,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
+    }
+    else if (p.dir == direction.down) {
+	viewport_ctx.translate(width_pixel,height_pixel);
+	viewport_ctx.rotate(Math.PI);
+	viewport_ctx.drawImage(canvas,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
+    }
+}
+
+function draw_player(p) {
+    var color = 'rgba('+p.shade.r+','+p.shade.g+','+p.shade.b+',1)';
+
+    canvas_ctx.fillStyle = color;
 
     adjust_shade(p.shade,p.shade_delta);
 
-/*
-    context.beginPath();
-    context.arc( x, y, cellsize, 0, Math.PI * 2, true );
-    context.closePath();
-    context.fill();
-*/
-    context.fillRect(p.position.x*cellsize+1,p.position.y*cellsize+1,cellsize-2,cellsize-2);
-
+    canvas_ctx.fillRect((p.position.x*cellsize)+1,
+			(p.position.y*cellsize)+1,
+			cellsize-2,
+			cellsize-2);
 }
 
 function adjust_shade(shade, delta) {

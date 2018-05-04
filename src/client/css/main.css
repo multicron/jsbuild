@@ -5,6 +5,8 @@
 
 html, body {
     background-color: #222;
+    overflow: hidden; /*  Disable scrollbars */
+    display: block;  /* No floating content on sides */
 }
 
 html, body, canvas {

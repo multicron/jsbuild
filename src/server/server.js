@@ -573,9 +573,9 @@ function tickPlayer(currentPlayer) {
           virus.splice(virusCollision, 1);
         }
 
-        var masaGanada = 0;
+        var masaGained = 0;
         for(var m=0; m<massEaten.length; m++) {
-            masaGanada += massFood[massEaten[m]].masa;
+            masaGained += massFood[massEaten[m]].masa;
             massFood[massEaten[m]] = {};
             massFood.splice(massEaten[m],1);
             for(var n=0; n<massEaten.length; n++) {
@@ -587,9 +587,9 @@ function tickPlayer(currentPlayer) {
 
         if(typeof(currentCell.speed) == "undefined")
             currentCell.speed = 6.25;
-        masaGanada += (foodEaten.length * c.foodMass);
-        currentCell.mass += masaGanada;
-        currentPlayer.massTotal += masaGanada;
+        masaGained += (foodEaten.length * c.foodMass);
+        currentCell.mass += masaGained;
+        currentPlayer.massTotal += masaGained;
         currentCell.radius = util.massToRadius(currentCell.mass);
         playerCircle.r = currentCell.radius;
 
@@ -654,9 +654,13 @@ function gameloop() {
 
 function sendUpdates() {
     users.forEach( function(u) {
+
         // center the view if x/y is undefined, this will happen for spectators
+
         u.x = u.x || c.gameWidth / 2;
         u.y = u.y || c.gameHeight / 2;
+
+	// This only updates stuff that's visible
 
         var visibleFood  = food
             .map(function(f) {
