@@ -250,12 +250,10 @@ function animate() {
 
     update_map(viewport_player);
 
-//    update_viewport_player();
-
 }
 
 function update_viewport_scale(p) {
-    p.scale = 1 + Math.min(2,(p.cells.length / 1000));
+    p.scale = 1 + Math.min(2,(p.size / 1000));
 }
 
 function award_collision(killed,killer) {
@@ -263,17 +261,6 @@ function award_collision(killed,killer) {
     killed.size = 1;
     if (killed === viewport_player) {
 	viewport_player = killer;
-    }
-}
-
-function update_viewport_player(p) {
-    var max = 0;
-
-    for (var i in players) {
-	if (players[i].size > max) {
-	    viewport_player = players[i];
-	    max = players[i].size;
-	}
     }
 }
 
