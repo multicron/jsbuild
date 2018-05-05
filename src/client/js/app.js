@@ -19,8 +19,8 @@ var global = {
     grid: 0,
     smallblocks: 0,
     cellsize: 10,
-    delaycount: 1,
-    minplayers: 40,
+    delaycount: 2,
+    minplayers: 300,
     rotateview: false,
 };
 
@@ -62,18 +62,18 @@ function new_player() {
 	dir: direction.up,
 	size: 30,
 	position: {
-	    x: Math.floor(Math.random() * dimension.width  / 2) + Math.floor(dimension.width / 4),
-	    y: Math.floor(Math.random() * dimension.height / 2) + Math.floor(dimension.height / 4),
+	    x: Math.floor(Math.random() * (dimension.width-50)) + 25,
+	    y: Math.floor(Math.random() * (dimension.height-50)) + 25,
 	},
 	shade : {
-	    r: Math.floor(Math.random()*256),
-	    g: Math.floor(Math.random()*256),
-	    b: Math.floor(Math.random()*256),
+	    h: Math.floor(Math.random()*360),
+	    s: 50,
+	    l: 50,
 	},
 	shade_delta : {
-	    r: 0.1,
-	    g: 0.1,
-	    b: 0.1,
+	    h: 0.0,
+	    s: 0.0,
+	    l: 0.0,
 	},
 	scale : 1.0,
 	cells: [],
@@ -104,7 +104,7 @@ function init() {
 
     clear_all_cells();
 
-    for (x=0;x<40;x++) {
+    for (x=0;x<300;x++) {
 	add_player();
     }
 
@@ -253,7 +253,7 @@ function animate() {
 }
 
 function update_viewport_scale(p) {
-    p.scale = 1 + Math.min(2,(p.size / 1000));
+    p.scale = 1 + Math.min(2,(p.cells.length / 1000));
 }
 
 function award_collision(killed,killer) {
@@ -274,6 +274,8 @@ function remove_dead_players() {
 }
 
 function shift_player(p) {
+
+    p.size += 0.01;
     
     p.cells.push({x: p.position.x,
 		  y: p.position.y
@@ -356,22 +358,22 @@ function move_player(p) {
 
     if (p.position.x < 0) {
 	p.position.x = 0;
-	p.dir = direction.right;
+	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
     }
 
     if (p.position.y < 0) {
 	p.position.y = 0;
-	p.dir = direction.down;
+	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
     }
 
     if (p.position.x >= dimension.width) {
 	p.position.x = dimension.width - 1;
-	p.dir = direction.left;
+	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
     }
 
     if (p.position.y >= dimension.height) {
 	p.position.y = dimension.height - 1;
-	p.dir = direction.up;
+	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
     }
 }
 
@@ -463,11 +465,6 @@ function update_map(p) {
 		     );
 }
 
-//function draw_player(p) {
-//    draw_cell(p.position,p.shade);
-//    adjust_shade(p.shade,p.shade_delta);
-//}
-
 function populate_all_cells(p) {
     for (var i in p.cells) {
 	all_cells[p.cells[i].x][p.cells[i].y] = p;
@@ -477,7 +474,7 @@ function populate_all_cells(p) {
 function refresh_player(p) {
     for (var i in p.cells) {
 	if (i == (p.cells.length - 1)) {
-	    draw_cell(p.cells[i],{r:0,g:0,b:0});
+	    draw_cell(p.cells[i],{h:0,l:0,s:0});
 	}
 	else {
 	    draw_cell(p.cells[i],p.shade);	
@@ -497,7 +494,8 @@ function draw_all_cells() {
 }
 
 function draw_cell(cell,shade) {
-    var color = 'rgb('+shade.r+','+shade.g+','+shade.b+')';
+    var ocolor = 'rgb('+shade.r+','+shade.g+','+shade.b+')';
+    var color = 'hsl('+shade.h+','+shade.l+'%,'+shade.s+'%)';
 
     board_ctx.fillStyle = color;
 
@@ -526,24 +524,17 @@ function check_collision(p) {
     if (c === p) {
 	return false;
     }
+    if (!c.alive) {
+	return false;
+    }
 
     return c;
 }
 
 function adjust_shade(shade, delta) {
-    shade.r += delta.r;
-    if (shade.r >= 235 || shade.r <= 50) {
-	delta.r = 0 - delta.r;
-    }
-
-    shade.g += delta.g;
-    if (shade.g >= 235 || shade.g <= 50) {
-	delta.g = 0 - delta.g;
-    }
-
-    shade.b += delta.b;
-    if (shade.b > 235 || shade.b <= 50) {
-	delta.b = 0 - delta.b;
+    shade.h += delta.h;
+    if (shade.h >= 360 || shade.h <= 0) {
+	delta.h = 0 - delta.h;
     }
 }
 
