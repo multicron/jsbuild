@@ -237,6 +237,8 @@ function balanceMass() {
     }
 }
 
+// Initial connection from the client to the server
+
 io.on('connection', function (socket) {
     console.log('A user connected!', socket.handshake.query.type);
 

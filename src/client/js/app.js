@@ -61,31 +61,6 @@ var players = [];
 
 var all_cells = [];
 
-function new_player() {
-    return {
-	alive: 1,
-	dir: direction.up,
-	speed: 1.0,
-	size: 100,
-	position: {
-	    x: Math.floor(Math.random() * (dimension.width-50)) + 25,
-	    y: Math.floor(Math.random() * (dimension.height-50)) + 25,
-	},
-	shade : {
-	    h: Math.floor(Math.random()*360),
-	    s: 50,
-	    l: 50,
-	},
-	shade_delta : {
-	    h: 3.0,
-	    s: 1.0,
-	    l: 0.5,
-	},
-	scale : 1.0,
-	cells: [],
-    };
-}
-
 var viewport_player;
 
 var direction_delta = {stopped: { x: 0,  y: 0  },
@@ -100,6 +75,11 @@ animate();
 
 function init() {
 
+
+    if (!socket) {
+        socket = io({query:"type=" + type});
+        setupSocket(socket);
+    }
 
     // Initialize "all cells" array for collision detection
 
@@ -132,17 +112,23 @@ function init() {
     draw_axes(test_ctx);
 */    
 
+    // A view of the entire board, same size as the viewport
+
     map = document.createElement( 'canvas' );
     map.width = view.width * global.cellsize;
     map.height = view.height * global.cellsize;
     map_ctx = map.getContext( '2d' );
     map_ctx.imageSmoothingEnabled = false;
 
+    // The entire playing field
+
     board = document.createElement( 'canvas' );
     board.width = dimension.width * global.cellsize;
     board.height = dimension.height * global.cellsize;
     board_ctx = board.getContext( '2d' );
     board_ctx.strokeRect(0,0,board_ctx.canvas.width,board_ctx.canvas.height);
+
+    // The current player's view into the board
 
     viewport = document.createElement( 'canvas' );
     viewport.width = view.width * global.cellsize;
@@ -155,6 +141,10 @@ function init() {
     document.body.appendChild(document.createElement('br'));
     document.body.appendChild( map );
     document.body.appendChild(document.createElement('br'));
+
+
+    // The board is not displayed (the map shows it shrunk down)
+
 //    document.body.appendChild( board );
 //    document.body.appendChild(document.createElement('br'));
 
@@ -177,8 +167,60 @@ function init() {
     }
 }
 
+// Player Constructor
+
+function Player() {
+    this.alive = 1;
+    this.dir = direction.up;
+    this.speed = 1.0;
+    this.size = 100;
+    this.position = {
+	x: Math.floor(Math.random() * (dimension.width-50)) + 25,
+	y: Math.floor(Math.random() * (dimension.height-50)) + 25,
+    };
+    this.shade  = {
+	h: Math.floor(Math.random()*360),
+	s: 50,
+	l: 50,
+    };
+    this.shade_delta  = {
+	h: 3.0,
+	s: 1.0,
+	l: 0.5,
+    };
+    this.scale  = 1.0;
+    this.cells = [];
+}
+
+// Player factory
+
+function new_player() {
+    return {
+	alive: 1,
+	dir: direction.up,
+	speed: 1.0,
+	size: 100,
+	position: {
+	    x: Math.floor(Math.random() * (dimension.width-50)) + 25,
+	    y: Math.floor(Math.random() * (dimension.height-50)) + 25,
+	},
+	shade : {
+	    h: Math.floor(Math.random()*360),
+	    s: 50,
+	    l: 50,
+	},
+	shade_delta : {
+	    h: 3.0,
+	    s: 1.0,
+	    l: 0.5,
+	},
+	scale : 1.0,
+	cells: [],
+    };
+}
+
 function add_player() {
-    players.push(new_player());
+    players.push(new Player());
 }
 
 function draw_axes(ctx) {
