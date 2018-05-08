@@ -1,5 +1,5 @@
 var io = require('socket.io-client');
-var socket;
+var connection;
 
 var logger = function(args) {
     if (console && console.log) {
@@ -76,9 +76,9 @@ animate();
 function init() {
 
 
-    if (!socket) {
-        socket = io({query:"type=" + type});
-        setupSocket(socket);
+    if (!connection) {
+        connection = io({query:"type=player"});
+//        setupConnection(connection);
     }
 
     // Initialize "all cells" array for collision detection
@@ -165,6 +165,112 @@ function init() {
 	board_ctx.closePath();
 	board_ctx.stroke();
     }
+
+function setupConnection(connection) {
+    connection.on('pongcheck', function () {
+    });
+
+    connection.on('connect_failed', function () {
+        connection.close();
+        global.disconnected = true;
+    });
+
+    connection.on('disconnect', function () {
+        connection.close();
+        global.disconnected = true;
+    });
+
+    // Handle connection.
+    connection.on('welcome', function (playerSettings) {
+        player = playerSettings;
+        player.name = global.playerName;
+        player.screenWidth = global.screenWidth;
+        player.screenHeight = global.screenHeight;
+        player.target = window.canvas.target;
+        global.player = player;
+        window.chat.player = player;
+        connection.emit('gotit', player);
+        global.gameStart = true;
+        debug('Game started at: ' + global.gameStart);
+        window.chat.addSystemLine('Connected to the game!');
+        window.chat.addSystemLine('Type <b>-help</b> for a list of commands.');
+        if (global.mobile) {
+            document.getElementById('gameAreaWrapper').removeChild(document.getElementById('chatbox'));
+        }
+		c.focus();
+    });
+
+    connection.on('gameSetup', function(data) {
+        global.gameWidth = data.gameWidth;
+        global.gameHeight = data.gameHeight;
+        resize();
+    });
+
+    connection.on('playerDied', function (data) {
+    });
+
+    connection.on('playerDisconnect', function (data) {
+    });
+
+    connection.on('playerJoin', function (data) {
+    });
+
+    connection.on('leaderboard', function (data) {
+        leaderboard = data.leaderboard;
+    });
+
+    connection.on('serverMSG', function (data) {
+    });
+
+    // Handle movement.
+    connection.on('serverTellPlayerMove', function (userData, foodsList, massList, virusList) {
+        var playerData;
+        for(var i =0; i< userData.length; i++) {
+            if(typeof(userData[i].id) == "undefined") {
+                playerData = userData[i];
+                i = userData.length;
+            }
+        }
+        if(global.playerType == 'player') {
+            var xoffset = player.x - playerData.x;
+            var yoffset = player.y - playerData.y;
+
+            player.x = playerData.x;
+            player.y = playerData.y;
+            player.hue = playerData.hue;
+            player.massTotal = playerData.massTotal;
+            player.cells = playerData.cells;
+            player.xoffset = isNaN(xoffset) ? 0 : xoffset;
+            player.yoffset = isNaN(yoffset) ? 0 : yoffset;
+        }
+        users = userData;
+        foods = foodsList;
+        viruses = virusList;
+        fireFood = massList;
+    });
+
+    connection.on('player_died', function () {
+        global.gameStart = false;
+        global.died = true;
+        window.setTimeout(function() {
+            document.getElementById('gameAreaWrapper').style.opacity = 0;
+            document.getElementById('startMenuWrapper').style.maxHeight = '1000px';
+            global.died = false;
+            if (global.animLoopHandle) {
+                window.cancelAnimationFrame(global.animLoopHandle);
+                global.animLoopHandle = undefined;
+            }
+        }, 2500);
+    });
+
+    connection.on('player_kicked', function (data) {
+        global.gameStart = false;
+        reason = data;
+        global.kicked = true;
+        connection.close();
+    });
+}
+
 }
 
 // Player Constructor

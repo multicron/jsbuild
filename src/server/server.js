@@ -28,7 +28,7 @@ var users = [];
 var massFood = [];
 var food = [];
 var virus = [];
-var sockets = {};
+var connections = {};
 
 var leaderboard = [];
 var leaderboardChanged = false;
@@ -55,46 +55,6 @@ if(s.host !== "DEFAULT") {
 var initMassLog = util.log(c.defaultPlayerMass, c.slowBase);
 
 app.use(express.static(__dirname + '/../client'));
-
-function addFood(toAdd) {
-    var radius = util.massToRadius(c.foodMass);
-    while (toAdd--) {
-        var position = c.foodUniformDisposition ? util.uniformPosition(food, radius) : util.randomPosition(radius);
-        food.push({
-            // Make IDs unique.
-            id: ((new Date()).getTime() + '' + food.length) >>> 0,
-            x: position.x,
-            y: position.y,
-            radius: radius,
-            mass: Math.random() + 2,
-            hue: Math.round(Math.random() * 360)
-        });
-    }
-}
-
-function addVirus(toAdd) {
-    while (toAdd--) {
-        var mass = util.randomInRange(c.virus.defaultMass.from, c.virus.defaultMass.to, true);
-        var radius = util.massToRadius(mass);
-        var position = c.virusUniformDisposition ? util.uniformPosition(virus, radius) : util.randomPosition(radius);
-        virus.push({
-            id: ((new Date()).getTime() + '' + virus.length) >>> 0,
-            x: position.x,
-            y: position.y,
-            radius: radius,
-            mass: mass,
-            fill: c.virus.fill,
-            stroke: c.virus.stroke,
-            strokeWidth: c.virus.strokeWidth
-        });
-    }
-}
-
-function removeFood(toRem) {
-    while (toRem--) {
-        food.pop();
-    }
-}
 
 function movePlayer(player) {
     var x =0,y =0;
@@ -207,42 +167,12 @@ function moveMass(mass) {
     }
 }
 
-function balanceMass() {
-    var totalMass = food.length * c.foodMass +
-        users
-            .map(function(u) {return u.massTotal; })
-            .reduce(function(pu,cu) { return pu+cu;}, 0);
-
-    var massDiff = c.gameMass - totalMass;
-    var maxFoodDiff = c.maxFood - food.length;
-    var foodDiff = parseInt(massDiff / c.foodMass) - maxFoodDiff;
-    var foodToAdd = Math.min(foodDiff, maxFoodDiff);
-    var foodToRemove = -Math.max(foodDiff, maxFoodDiff);
-
-    if (foodToAdd > 0) {
-        //console.log('[DEBUG] Adding ' + foodToAdd + ' food to level!');
-        addFood(foodToAdd);
-        //console.log('[DEBUG] Mass rebalanced!');
-    }
-    else if (foodToRemove > 0) {
-        //console.log('[DEBUG] Removing ' + foodToRemove + ' food from level!');
-        removeFood(foodToRemove);
-        //console.log('[DEBUG] Mass rebalanced!');
-    }
-
-    var virusToAdd = c.maxVirus - virus.length;
-
-    if (virusToAdd > 0) {
-        addVirus(virusToAdd);
-    }
-}
-
 // Initial connection from the client to the server
 
-io.on('connection', function (socket) {
-    console.log('A user connected!', socket.handshake.query.type);
+io.on('connection', function (connection) {
+    console.log('A user connected!', connection.handshake.query.type);
 
-    var type = socket.handshake.query.type;
+    var type = connection.handshake.query.type;
     var radius = util.massToRadius(c.defaultPlayerMass);
     var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
 
@@ -259,7 +189,7 @@ io.on('connection', function (socket) {
     }
 
     var currentPlayer = {
-        id: socket.id,
+        id: connection.id,
         x: position.x,
         y: position.y,
         w: c.defaultPlayerMass,
@@ -275,18 +205,18 @@ io.on('connection', function (socket) {
         }
     };
 
-    socket.on('gotit', function (player) {
+    connection.on('gotit', function (player) {
         console.log('[INFO] Player ' + player.name + ' connecting!');
 
         if (util.findIndex(users, player.id) > -1) {
             console.log('[INFO] Player ID is already connected, kicking.');
-            socket.disconnect();
+            connection.disconnect();
         } else if (!util.validNick(player.name)) {
-            socket.emit('kick', 'Invalid username.');
-            socket.disconnect();
+            connection.emit('kick', 'Invalid username.');
+            connection.disconnect();
         } else {
             console.log('[INFO] Player ' + player.name + ' connected!');
-            sockets[player.id] = socket;
+            connections[player.id] = connection;
 
             var radius = util.massToRadius(c.defaultPlayerMass);
             var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
@@ -315,7 +245,7 @@ io.on('connection', function (socket) {
 
             io.emit('playerJoin', { name: currentPlayer.name });
 
-            socket.emit('gameSetup', {
+            connection.emit('gameSetup', {
                 gameWidth: c.gameWidth,
                 gameHeight: c.gameHeight
             });
@@ -324,55 +254,55 @@ io.on('connection', function (socket) {
 
     });
 
-    socket.on('pingcheck', function () {
-        socket.emit('pongcheck');
+    connection.on('pingcheck', function () {
+        connection.emit('pongcheck');
     });
 
-    socket.on('windowResized', function (data) {
+    connection.on('windowResized', function (data) {
         currentPlayer.screenWidth = data.screenWidth;
         currentPlayer.screenHeight = data.screenHeight;
     });
 
-    socket.on('respawn', function () {
+    connection.on('respawn', function () {
         if (util.findIndex(users, currentPlayer.id) > -1)
             users.splice(util.findIndex(users, currentPlayer.id), 1);
-        socket.emit('welcome', currentPlayer);
+        connection.emit('welcome', currentPlayer);
         console.log('[INFO] User ' + currentPlayer.name + ' respawned!');
     });
 
-    socket.on('disconnect', function () {
+    connection.on('disconnect', function () {
         if (util.findIndex(users, currentPlayer.id) > -1)
             users.splice(util.findIndex(users, currentPlayer.id), 1);
         console.log('[INFO] User ' + currentPlayer.name + ' disconnected!');
 
-        socket.broadcast.emit('playerDisconnect', { name: currentPlayer.name });
+        connection.broadcast.emit('playerDisconnect', { name: currentPlayer.name });
     });
 
-    socket.on('playerChat', function(data) {
+    connection.on('playerChat', function(data) {
         var _sender = data.sender.replace(/(<([^>]+)>)/ig, '');
         var _message = data.message.replace(/(<([^>]+)>)/ig, '');
         if (c.logChat === 1) {
             console.log('[CHAT] [' + (new Date()).getHours() + ':' + (new Date()).getMinutes() + '] ' + _sender + ': ' + _message);
         }
-        socket.broadcast.emit('serverSendPlayerChat', {sender: _sender, message: _message.substring(0,35)});
+        connection.broadcast.emit('serverSendPlayerChat', {sender: _sender, message: _message.substring(0,35)});
     });
 
-    socket.on('pass', function(data) {
+    connection.on('pass', function(data) {
         if (data[0] === c.adminPass) {
             console.log('[ADMIN] ' + currentPlayer.name + ' just logged in as an admin!');
-            socket.emit('serverMSG', 'Welcome back ' + currentPlayer.name);
-            socket.broadcast.emit('serverMSG', currentPlayer.name + ' just logged in as admin!');
+            connection.emit('serverMSG', 'Welcome back ' + currentPlayer.name);
+            connection.broadcast.emit('serverMSG', currentPlayer.name + ' just logged in as admin!');
             currentPlayer.admin = true;
         } else {
             
             // TODO: Actually log incorrect passwords.
               console.log('[ADMIN] ' + currentPlayer.name + ' attempted to log in with incorrect password.');
-              socket.emit('serverMSG', 'Password incorrect, attempt logged.');
+              connection.emit('serverMSG', 'Password incorrect, attempt logged.');
              pool.query('INSERT INTO logging SET name=' + currentPlayer.name + ', reason="Invalid login attempt as admin"');
         }
     });
 
-    socket.on('kick', function(data) {
+    connection.on('kick', function(data) {
         if (currentPlayer.admin) {
             var reason = '';
             var worked = false;
@@ -394,31 +324,31 @@ io.on('connection', function (socket) {
                     else {
                        console.log('[ADMIN] User ' + users[e].name + ' kicked successfully by ' + currentPlayer.name);
                     }
-                    socket.emit('serverMSG', 'User ' + users[e].name + ' was kicked by ' + currentPlayer.name);
-                    sockets[users[e].id].emit('kick', reason);
-                    sockets[users[e].id].disconnect();
+                    connection.emit('serverMSG', 'User ' + users[e].name + ' was kicked by ' + currentPlayer.name);
+                    connections[users[e].id].emit('kick', reason);
+                    connections[users[e].id].disconnect();
                     users.splice(e, 1);
                     worked = true;
                 }
             }
             if (!worked) {
-                socket.emit('serverMSG', 'Could not locate user or user is an admin.');
+                connection.emit('serverMSG', 'Could not locate user or user is an admin.');
             }
         } else {
             console.log('[ADMIN] ' + currentPlayer.name + ' is trying to use -kick but isn\'t an admin.');
-            socket.emit('serverMSG', 'You are not permitted to use this command.');
+            connection.emit('serverMSG', 'You are not permitted to use this command.');
         }
     });
 
     // Heartbeat function, update everytime.
-    socket.on('0', function(target) {
+    connection.on('0', function(target) {
         currentPlayer.lastHeartbeat = new Date().getTime();
         if (target.x !== currentPlayer.x || target.y !== currentPlayer.y) {
             currentPlayer.target = target;
         }
     });
 
-    socket.on('1', function() {
+    connection.on('1', function() {
         // Fire food.
         for(var i=0; i<currentPlayer.cells.length; i++)
         {
@@ -447,7 +377,7 @@ io.on('connection', function (socket) {
             }
         }
     });
-    socket.on('2', function(virusCell) {
+    connection.on('2', function(virusCell) {
         function splitCell(cell) {
             if(cell.mass >= c.defaultPlayerMass*2) {
                 cell.mass = cell.mass/2;
@@ -483,8 +413,8 @@ io.on('connection', function (socket) {
 
 function tickPlayer(currentPlayer) {
     if(currentPlayer.lastHeartbeat < new Date().getTime() - c.maxHeartbeatInterval) {
-        sockets[currentPlayer.id].emit('kick', 'Last heartbeat received over ' + c.maxHeartbeatInterval + ' ago.');
-        sockets[currentPlayer.id].disconnect();
+        connections[currentPlayer.id].emit('kick', 'Last heartbeat received over ' + c.maxHeartbeatInterval + ' ago.');
+        connections[currentPlayer.id].disconnect();
     }
 
     movePlayer(currentPlayer);
@@ -546,7 +476,7 @@ function tickPlayer(currentPlayer) {
                 } else {
                     users.splice(numUser, 1);
                     io.emit('playerDied', { name: collision.bUser.name });
-                    sockets[collision.bUser.id].emit('RIP');
+                    connections[collision.bUser.id].emit('RIP');
                 }
             }
             currentPlayer.massTotal += collision.bUser.mass;
@@ -573,7 +503,7 @@ function tickPlayer(currentPlayer) {
            .reduce( function(a, b, c) { return b ? a.concat(c) : a; }, []);
 
         if(virusCollision > 0 && currentCell.mass > virus[virusCollision].mass) {
-          sockets[currentPlayer.id].emit('virusSplit', z);
+          connections[currentPlayer.id].emit('virusSplit', z);
           virus.splice(virusCollision, 1);
         }
 
@@ -653,7 +583,6 @@ function gameloop() {
             }
         }
     }
-    balanceMass();
 }
 
 function sendUpdates() {
@@ -733,9 +662,9 @@ function sendUpdates() {
             })
             .filter(function(f) { return f; });
 
-        sockets[u.id].emit('serverTellPlayerMove', visibleCells, visibleFood, visibleMass, visibleVirus);
+        connections[u.id].emit('serverTellPlayerMove', visibleCells, visibleFood, visibleMass, visibleVirus);
         if (leaderboardChanged) {
-            sockets[u.id].emit('leaderboard', {
+            connections[u.id].emit('leaderboard', {
                 players: users.length,
                 leaderboard: leaderboard
             });
