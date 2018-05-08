@@ -1,7 +1,13 @@
 /*jslint bitwise: true, node: true */
 'use strict';
 
-console.log("server.js starting up");
+var logger = function(args) {
+    if (console && console.log) {
+        console.log(args);
+    }
+};
+
+logger("server.js starting up");
 
 var express = require('express');
 var app = express();
@@ -47,7 +53,7 @@ if(s.host !== "DEFAULT") {
     //log sql errors
     pool.connect(function(err){
         if (err){
-            console.log (err);
+            logger (err);
         }
     });
 }
@@ -170,7 +176,7 @@ function moveMass(mass) {
 // Initial connection from the client to the server
 
 io.on('connection', function (connection) {
-    console.log('A user connected!', connection.handshake.query.type);
+    logger('A user connected!', connection.handshake.query.type);
 
     var type = connection.handshake.query.type;
     var radius = util.massToRadius(c.defaultPlayerMass);
@@ -206,16 +212,16 @@ io.on('connection', function (connection) {
     };
 
     connection.on('gotit', function (player) {
-        console.log('[INFO] Player ' + player.name + ' connecting!');
+        logger('[INFO] Player ' + player.name + ' connecting!');
 
         if (util.findIndex(users, player.id) > -1) {
-            console.log('[INFO] Player ID is already connected, kicking.');
+            logger('[INFO] Player ID is already connected, kicking.');
             connection.disconnect();
         } else if (!util.validNick(player.name)) {
             connection.emit('kick', 'Invalid username.');
             connection.disconnect();
         } else {
-            console.log('[INFO] Player ' + player.name + ' connected!');
+            logger('[INFO] Player ' + player.name + ' connected!');
             connections[player.id] = connection;
 
             var radius = util.massToRadius(c.defaultPlayerMass);
@@ -249,7 +255,7 @@ io.on('connection', function (connection) {
                 gameWidth: c.gameWidth,
                 gameHeight: c.gameHeight
             });
-            console.log('Total players: ' + users.length);
+            logger('Total players: ' + users.length);
         }
 
     });
@@ -267,13 +273,13 @@ io.on('connection', function (connection) {
         if (util.findIndex(users, currentPlayer.id) > -1)
             users.splice(util.findIndex(users, currentPlayer.id), 1);
         connection.emit('welcome', currentPlayer);
-        console.log('[INFO] User ' + currentPlayer.name + ' respawned!');
+        logger('[INFO] User ' + currentPlayer.name + ' respawned!');
     });
 
     connection.on('disconnect', function () {
         if (util.findIndex(users, currentPlayer.id) > -1)
             users.splice(util.findIndex(users, currentPlayer.id), 1);
-        console.log('[INFO] User ' + currentPlayer.name + ' disconnected!');
+        logger('[INFO] User ' + currentPlayer.name + ' disconnected!');
 
         connection.broadcast.emit('playerDisconnect', { name: currentPlayer.name });
     });
@@ -282,21 +288,21 @@ io.on('connection', function (connection) {
         var _sender = data.sender.replace(/(<([^>]+)>)/ig, '');
         var _message = data.message.replace(/(<([^>]+)>)/ig, '');
         if (c.logChat === 1) {
-            console.log('[CHAT] [' + (new Date()).getHours() + ':' + (new Date()).getMinutes() + '] ' + _sender + ': ' + _message);
+            logger('[CHAT] [' + (new Date()).getHours() + ':' + (new Date()).getMinutes() + '] ' + _sender + ': ' + _message);
         }
         connection.broadcast.emit('serverSendPlayerChat', {sender: _sender, message: _message.substring(0,35)});
     });
 
     connection.on('pass', function(data) {
         if (data[0] === c.adminPass) {
-            console.log('[ADMIN] ' + currentPlayer.name + ' just logged in as an admin!');
+            logger('[ADMIN] ' + currentPlayer.name + ' just logged in as an admin!');
             connection.emit('serverMSG', 'Welcome back ' + currentPlayer.name);
             connection.broadcast.emit('serverMSG', currentPlayer.name + ' just logged in as admin!');
             currentPlayer.admin = true;
         } else {
             
             // TODO: Actually log incorrect passwords.
-              console.log('[ADMIN] ' + currentPlayer.name + ' attempted to log in with incorrect password.');
+              logger('[ADMIN] ' + currentPlayer.name + ' attempted to log in with incorrect password.');
               connection.emit('serverMSG', 'Password incorrect, attempt logged.');
              pool.query('INSERT INTO logging SET name=' + currentPlayer.name + ', reason="Invalid login attempt as admin"');
         }
@@ -319,10 +325,10 @@ io.on('connection', function (connection) {
                         }
                     }
                     if (reason !== '') {
-                       console.log('[ADMIN] User ' + users[e].name + ' kicked successfully by ' + currentPlayer.name + ' for reason ' + reason);
+                       logger('[ADMIN] User ' + users[e].name + ' kicked successfully by ' + currentPlayer.name + ' for reason ' + reason);
                     }
                     else {
-                       console.log('[ADMIN] User ' + users[e].name + ' kicked successfully by ' + currentPlayer.name);
+                       logger('[ADMIN] User ' + users[e].name + ' kicked successfully by ' + currentPlayer.name);
                     }
                     connection.emit('serverMSG', 'User ' + users[e].name + ' was kicked by ' + currentPlayer.name);
                     connections[users[e].id].emit('kick', reason);
@@ -335,7 +341,7 @@ io.on('connection', function (connection) {
                 connection.emit('serverMSG', 'Could not locate user or user is an admin.');
             }
         } else {
-            console.log('[ADMIN] ' + currentPlayer.name + ' is trying to use -kick but isn\'t an admin.');
+            logger('[ADMIN] ' + currentPlayer.name + ' is trying to use -kick but isn\'t an admin.');
             connection.emit('serverMSG', 'You are not permitted to use this command.');
         }
     });
@@ -464,9 +470,9 @@ function tickPlayer(currentPlayer) {
 
     function collisionCheck(collision) {
         if (collision.aUser.mass > collision.bUser.mass * 1.1  && collision.aUser.radius > Math.sqrt(Math.pow(collision.aUser.x - collision.bUser.x, 2) + Math.pow(collision.aUser.y - collision.bUser.y, 2))*1.75) {
-            console.log('[DEBUG] Killing user: ' + collision.bUser.id);
-            console.log('[DEBUG] Collision info:');
-            console.log(collision);
+            logger('[DEBUG] Killing user: ' + collision.bUser.id);
+            logger('[DEBUG] Collision info:');
+            logger(collision);
 
             var numUser = util.findIndex(users, collision.bUser.id);
             if (numUser > -1) {
@@ -648,7 +654,7 @@ function sendUpdates() {
                                 name: f.name
                             };
                         } else {
-                            //console.log("Nombre: " + f.name + " Es Usuario");
+                            //logger("Nombre: " + f.name + " Es Usuario");
                             return {
                                 x: f.x,
                                 y: f.y,
@@ -681,5 +687,5 @@ setInterval(sendUpdates, 1000 / c.networkUpdateFactor);
 var ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || c.host;
 var serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || c.port;
 http.listen( serverport, ipaddress, function() {
-    console.log('[DEBUG] Listening on ' + ipaddress + ':' + serverport);
+    logger('[DEBUG] Listening on ' + ipaddress + ':' + serverport);
 });

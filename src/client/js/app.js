@@ -78,7 +78,8 @@ function init() {
 
     if (!connection) {
         connection = io({query:"type=player"});
-//        setupConnection(connection);
+        setupConnection(connection);
+	connection.emit("respawn");
     }
 
     // Initialize "all cells" array for collision detection
@@ -181,17 +182,11 @@ function setupConnection(connection) {
     });
 
     // Handle connection.
-    connection.on('welcome', function (playerSettings) {
-        player = playerSettings;
-        player.name = global.playerName;
-        player.screenWidth = global.screenWidth;
-        player.screenHeight = global.screenHeight;
-        player.target = window.canvas.target;
-        global.player = player;
-        window.chat.player = player;
+    connection.on('welcome', function (data) {
+	logger("Got welcome "+data);
         connection.emit('gotit', player);
         global.gameStart = true;
-        debug('Game started at: ' + global.gameStart);
+        logger('Game started at: ' + global.gameStart);
         window.chat.addSystemLine('Connected to the game!');
         window.chat.addSystemLine('Type <b>-help</b> for a list of commands.');
         if (global.mobile) {
