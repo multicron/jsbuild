@@ -1,6 +1,8 @@
 /*jslint bitwise: true, node: true */
 'use strict';
 
+console.log("server.js starting up");
+
 var express = require('express');
 var app = express();
 var http = require('http').Server(app);

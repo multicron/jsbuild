@@ -1,4 +1,11 @@
 var io = require('socket.io-client');
+var socket;
+
+var logger = function(args) {
+    if (console && console.log) {
+        console.log(args);
+    }
+};
 
 // requestAnim shim layer by Paul Irish
     window.requestAnimFrame = (function(){
@@ -94,6 +101,8 @@ animate();
 function init() {
 
 
+    // Initialize "all cells" array for collision detection
+
     for (var i=0;i<dimension.width;i++) {
 	all_cells[i]=[];
 	for (j=0;j<dimension.height;j++) {
@@ -101,13 +110,17 @@ function init() {
 	}
     }
 
-    clear_all_cells();
+    // Add initial players to the players[] array
 
     for (x=0;x<150;x++) {
 	add_player();
     }
 
+    // Pick someone to be the player shown on the viewport
+
     viewport_player = players[0];
+
+    // Canvases
 
 /*
     test = document.createElement( 'canvas' );
@@ -138,14 +151,16 @@ function init() {
     viewport_ctx.strokeRect(0,0,viewport_ctx.canvas.width,viewport_ctx.canvas.height);
     viewport_ctx.imageSmoothingEnabled = false;
 
-    board_ctx.strokeStyle = 'rgb(205,205,205)';
-
     document.body.appendChild( viewport );
     document.body.appendChild(document.createElement('br'));
     document.body.appendChild( map );
     document.body.appendChild(document.createElement('br'));
 //    document.body.appendChild( board );
 //    document.body.appendChild(document.createElement('br'));
+
+    // Draw the grid, if enabled
+
+    board_ctx.strokeStyle = 'rgb(205,205,205)';
 
     if (global.grid) {
 	board_ctx.beginPath();
