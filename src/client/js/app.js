@@ -13,14 +13,12 @@ var io = require('socket.io-client');
     })();
   
 
-// example code from mr doob : http://mrdoob.com/lab/javascript/requestanimationframe/
-
 var global = {
     grid: 0,
     smallblocks: 0,
     cellsize: 10,
-    delaycount: 2,
-    minplayers: 300,
+    delaycount: 0,
+    minplayers: 15,
     rotateview: false,
 };
 
@@ -60,7 +58,8 @@ function new_player() {
     return {
 	alive: 1,
 	dir: direction.up,
-	size: 30,
+	speed: 1.0,
+	size: 100,
 	position: {
 	    x: Math.floor(Math.random() * (dimension.width-50)) + 25,
 	    y: Math.floor(Math.random() * (dimension.height-50)) + 25,
@@ -71,9 +70,9 @@ function new_player() {
 	    l: 50,
 	},
 	shade_delta : {
-	    h: 0.0,
-	    s: 0.0,
-	    l: 0.0,
+	    h: 3.0,
+	    s: 1.0,
+	    l: 0.5,
 	},
 	scale : 1.0,
 	cells: [],
@@ -104,7 +103,7 @@ function init() {
 
     clear_all_cells();
 
-    for (x=0;x<300;x++) {
+    for (x=0;x<150;x++) {
 	add_player();
     }
 
@@ -207,7 +206,7 @@ var delaycount = 0;
 function animate() {
     requestAnimFrame( animate );
 
-    if (players.length < global.minplayers) {
+    while (players.length < global.minplayers) {
 	add_player();
     }
 
@@ -253,11 +252,11 @@ function animate() {
 }
 
 function update_viewport_scale(p) {
-    p.scale = 1 + Math.min(2,(p.cells.length / 1000));
+    p.scale = 1; // + Math.min(2,(p.cells.length / 1000));
 }
 
 function award_collision(killed,killer) {
-    killer.size += killed.size;
+    killer.size += killed.cells.length;
     killed.size = 1;
     if (killed === viewport_player) {
 	viewport_player = killer;
@@ -353,8 +352,8 @@ function move_player(p) {
 	break;
     }
     
-    p.position.x += delta.x;
-    p.position.y += delta.y;
+    p.position.x += delta.x * p.speed;
+    p.position.y += delta.y * p.speed;
 
     if (p.position.x < 0) {
 	p.position.x = 0;
@@ -392,14 +391,14 @@ function update_viewport(p) {
     var x = p.position.x - p.scale*view.width/2;
     var y = p.position.y - p.scale*view.height/2;
 
-    if (x < 0) {
+/*    if (x < 0) {
 	x = 0;
 	}
 
     if (y < 0) {
 	y = 0;
 	}
-
+*/
     viewport_ctx.resetTransform(); // Not implemented in all browsers
     viewport_ctx.clearRect( 0, 0, viewport_ctx.canvas.width, viewport_ctx.canvas.height);
     viewport_ctx.strokeRect(0, 0, viewport_ctx.canvas.width, viewport_ctx.canvas.height);
@@ -472,14 +471,28 @@ function populate_all_cells(p) {
 }
 
 function refresh_player(p) {
+//    adjust_shade(p.shade,p.shade_delta,p.shade);
+
+    var shade = {
+	h:p.shade.h,
+	l:p.shade.l,
+	s:p.shade.s,
+    };
+
+    var shade_delta = {
+	h:p.shade_delta.h,
+	l:p.shade_delta.l,
+	s:p.shade_delta.s,
+    };
+
     for (var i in p.cells) {
 	if (i == (p.cells.length - 1)) {
 	    draw_cell(p.cells[i],{h:0,l:0,s:0});
 	}
 	else {
-	    draw_cell(p.cells[i],p.shade);	
+	    draw_cell(p.cells[i],shade);	
 	}
-//	adjust_shade(p.shade,p.shade_delta);
+	adjust_shade(shade,shade_delta,p.shade);
     }
 }
 
@@ -494,7 +507,6 @@ function draw_all_cells() {
 }
 
 function draw_cell(cell,shade) {
-    var ocolor = 'rgb('+shade.r+','+shade.g+','+shade.b+')';
     var color = 'hsl('+shade.h+','+shade.l+'%,'+shade.s+'%)';
 
     board_ctx.fillStyle = color;
@@ -531,11 +543,22 @@ function check_collision(p) {
     return c;
 }
 
-function adjust_shade(shade, delta) {
+function adjust_shade(shade, delta, orig) {
     shade.h += delta.h;
-    if (shade.h >= 360 || shade.h <= 0) {
-	delta.h = 0 - delta.h;
+    if (Math.abs(shade.h-orig.h) > 20 || shade.h >= 360 || shade.h <= 0) {
+    	delta.h = 0 - delta.h;
     }
+
+    shade.s += delta.s;
+    if (shade.s >= 75 || shade.s <= 25) {
+	delta.s = 0 - delta.s;
+    }
+	
+    shade.l += delta.l;
+    if (shade.l >= 75 || shade.l <= 40) {
+	delta.l = 0 - delta.l;
+    }
+	
 }
 
 
