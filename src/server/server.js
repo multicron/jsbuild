@@ -18,45 +18,7 @@ logger("server.js starting up");
 var conf = {
     "host": "0.0.0.0",
     "port": 3000,
-    "logpath": "logger.php",
-    "foodMass": 1,
-    "fireFood": 20,
-    "limitSplit": 16,
-    "defaultPlayerMass": 10,
-	"virus": {
-    "fill": "#33ff33",
-  	"stroke": "#19D119",
-		"strokeWidth": 20,
-		"defaultMass": {
-            "from": 100,
-            "to": 150
-        },
-		"splitMass": 180
-	},
-    "gameWidth": 5000,
-    "gameHeight": 5000,
-    "adminPass": "DEFAULT",
-    "gameMass": 20000,
-    "maxFood": 1000,
-    "maxVirus": 50,
-    "slowBase": 4.5,
-    "logChat": 0,
     "networkUpdateFactor": 40,
-    "maxHeartbeatInterval": 5000,
-    "foodUniformDisposition": true,
-    "virusUniformDisposition": false,
-    "newPlayerInitialPosition": "farthest",
-    "massLossRate": 1,
-    "minMassLoss": 50,
-    "mergeTimer": 15,
-    "sqlinfo":{
-      "connectionLimit": 100,
-      "host": "DEFAULT",
-      "user": "root",
-      "password": "DEFAULT",
-      "database": "DEFAULT",
-      "debug": false
-    }
 };
 
 // Import utilities.
@@ -168,12 +130,7 @@ function init_game() {
     }
 }
 
-var initMassLog = util.log(conf.defaultPlayerMass, conf.slowBase);
-
 app.use(express.static(__dirname + '/../client'));
-
-function movePlayer(player) {
-}
 
 function update_viewport_scale(p) {
     p.scale = 1 + Math.min(2,(p.cells.length / 1000));
@@ -393,20 +350,6 @@ io.on('connect', function (socket) {
 
     // Initialize new player
 
-    var radius = util.massToRadius(conf.defaultPlayerMass);
-    var position = conf.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
-
-    var cells = [];
-    var massTotal = 0;
-    if(type === 'player') {
-        cells = [{
-            mass: conf.defaultPlayerMass,
-            x: position.x,
-            y: position.y,
-            radius: radius
-        }];
-        massTotal = conf.defaultPlayerMass;
-    }
 
 //    var currentPlayer = new Player();
 //    currentPlayer.id = socket.id;
@@ -429,39 +372,6 @@ io.on('connect', function (socket) {
         } else {
             logger('[INFO] Player ' + player.name + ' connected!');
             sockets[player.id] = socket;
-
-            var radius = util.massToRadius(conf.defaultPlayerMass);
-            var position = conf.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
-
-            player.x = position.x;
-            player.y = position.y;
-            player.target.x = 0;
-            player.target.y = 0;
-            if(type === 'player') {
-                player.cells = [{
-                    mass: conf.defaultPlayerMass,
-                    x: position.x,
-                    y: position.y,
-                    radius: radius
-                }];
-                player.massTotal = conf.defaultPlayerMass;
-            }
-            else {
-                 player.cells = [];
-                 player.massTotal = 0;
-            }
-            player.hue = Math.round(Math.random() * 360);
-            currentPlayer = player;
-            currentPlayer.lastHeartbeat = new Date().getTime();
-            users.push(currentPlayer);
-
-            io.emit('playerJoin', { name: currentPlayer.name });
-
-            socket.emit('gameSetup', {
-                gameWidth: conf.gameWidth,
-                gameHeight: conf.gameHeight
-            });
-            logger('Total players: ' + users.length);
         }
 
     });
@@ -484,15 +394,6 @@ io.on('connect', function (socket) {
         logger('[INFO] User ' + currentPlayer.name + ' disconnected!');
 
         socket.broadcast.emit('playerDisconnect', { name: currentPlayer.name });
-    });
-
-    socket.on('playerChat', function(data) {
-        var _sender = data.sender.replace(/(<([^>]+)>)/ig, '');
-        var _message = data.message.replace(/(<([^>]+)>)/ig, '');
-        if (conf.logChat === 1) {
-            logger('[CHAT] [' + (new Date()).getHours() + ':' + (new Date()).getMinutes() + '] ' + _sender + ': ' + _message);
-        }
-        socket.broadcast.emit('serverSendPlayerChat', {sender: _sender, message: _message.substring(0,35)});
     });
 
     socket.on('kick', function(data) {
