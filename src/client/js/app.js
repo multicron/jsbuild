@@ -1,5 +1,5 @@
 var io = require('socket.io-client');
-var connection;
+var socket;
 
 var logger = function(args) {
     if (console && console.log) {
@@ -25,7 +25,7 @@ var global = {
     smallblocks: 0,
     cellsize: 10,
     delaycount: 0,
-    minplayers: 15,
+    minplayers: 1,
     rotateview: false,
 };
 
@@ -76,10 +76,10 @@ animate();
 function init() {
 
 
-    if (!connection) {
-        connection = io({query:"type=player"});
-        setupConnection(connection);
-	connection.emit("respawn");
+    if (!socket) {
+        socket = io({query:"type=player"});
+        setupSocket(socket);
+	socket.emit("client_setup");
     }
 
     // Initialize "all cells" array for collision detection
@@ -93,7 +93,7 @@ function init() {
 
     // Add initial players to the players[] array
 
-    for (x=0;x<150;x++) {
+    for (x=0;x<100;x++) {
 	add_player();
     }
 
@@ -167,58 +167,53 @@ function init() {
 	board_ctx.stroke();
     }
 
-function setupConnection(connection) {
-    connection.on('pongcheck', function () {
+function setupSocket(socket) {
+    socket.on('pongcheck', function () {
     });
 
-    connection.on('connect_failed', function () {
-        connection.close();
+    socket.on('connect_failed', function () {
+        socket.close();
         global.disconnected = true;
     });
 
-    connection.on('disconnect', function () {
-        connection.close();
+    socket.on('disconnect', function () {
+        socket.close();
         global.disconnected = true;
     });
 
-    // Handle connection.
-    connection.on('welcome', function (data) {
+    socket.on("server_setup", function() {
+	logger("Got server_setup");
+	socket.emit("client_setup");
+    });
+
+    socket.on('welcome', function (data) {
 	logger("Got welcome "+data);
-        connection.emit('gotit', player);
-        global.gameStart = true;
-        logger('Game started at: ' + global.gameStart);
-        window.chat.addSystemLine('Connected to the game!');
-        window.chat.addSystemLine('Type <b>-help</b> for a list of commands.');
-        if (global.mobile) {
-            document.getElementById('gameAreaWrapper').removeChild(document.getElementById('chatbox'));
-        }
-		c.focus();
+        socket.emit('gotit');
     });
 
-    connection.on('gameSetup', function(data) {
-        global.gameWidth = data.gameWidth;
-        global.gameHeight = data.gameHeight;
-        resize();
+    socket.on('gameSetup', function(data) {
+	logger("Got gamesetup");
     });
 
-    connection.on('playerDied', function (data) {
+    socket.on('playerDied', function (data) {
+	logger("Got playerDied");
     });
 
-    connection.on('playerDisconnect', function (data) {
+    socket.on('playerDisconnect', function (data) {
     });
 
-    connection.on('playerJoin', function (data) {
+    socket.on('playerJoin', function (data) {
     });
 
-    connection.on('leaderboard', function (data) {
+    socket.on('leaderboard', function (data) {
         leaderboard = data.leaderboard;
     });
 
-    connection.on('serverMSG', function (data) {
+    socket.on('serverMSG', function (data) {
     });
 
     // Handle movement.
-    connection.on('serverTellPlayerMove', function (userData, foodsList, massList, virusList) {
+    socket.on('serverTellPlayerMove', function (userData, foodsList, massList, virusList) {
         var playerData;
         for(var i =0; i< userData.length; i++) {
             if(typeof(userData[i].id) == "undefined") {
@@ -244,7 +239,7 @@ function setupConnection(connection) {
         fireFood = massList;
     });
 
-    connection.on('player_died', function () {
+    socket.on('player_died', function () {
         global.gameStart = false;
         global.died = true;
         window.setTimeout(function() {
@@ -258,11 +253,11 @@ function setupConnection(connection) {
         }, 2500);
     });
 
-    connection.on('player_kicked', function (data) {
+    socket.on('player_kicked', function (data) {
         global.gameStart = false;
         reason = data;
         global.kicked = true;
-        connection.close();
+        socket.close();
     });
 }
 
@@ -274,7 +269,7 @@ function Player() {
     this.alive = 1;
     this.dir = direction.up;
     this.speed = 1.0;
-    this.size = 100;
+    this.size = 25;
     this.position = {
 	x: Math.floor(Math.random() * (dimension.width-50)) + 25,
 	y: Math.floor(Math.random() * (dimension.height-50)) + 25,

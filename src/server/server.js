@@ -1,20 +1,19 @@
 /*jslint bitwise: true, node: true */
 'use strict';
 
-var logger = function(args) {
-    if (console && console.log) {
-        console.log(args);
-    }
-};
-
-logger("server.js starting up");
-
 var express = require('express');
 var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var SAT = require('sat');
 var sql = require ("mysql");
+var debug = require('debug')('blubio');
+
+var logger = function(args) {
+    debug(args);
+};
+
+logger("server.js starting up");
 
 // Import game settings.
 var c = require('../../config.json');
@@ -63,119 +62,11 @@ var initMassLog = util.log(c.defaultPlayerMass, c.slowBase);
 app.use(express.static(__dirname + '/../client'));
 
 function movePlayer(player) {
-    var x =0,y =0;
-    for(var i=0; i<player.cells.length; i++)
-    {
-        var target = {
-            x: player.x - player.cells[i].x + player.target.x,
-            y: player.y - player.cells[i].y + player.target.y
-        };
-        var dist = Math.sqrt(Math.pow(target.y, 2) + Math.pow(target.x, 2));
-        var deg = Math.atan2(target.y, target.x);
-        var slowDown = 1;
-        if(player.cells[i].speed <= 6.25) {
-            slowDown = util.log(player.cells[i].mass, c.slowBase) - initMassLog + 1;
-        }
-
-        var deltaY = player.cells[i].speed * Math.sin(deg)/ slowDown;
-        var deltaX = player.cells[i].speed * Math.cos(deg)/ slowDown;
-
-        if(player.cells[i].speed > 6.25) {
-            player.cells[i].speed -= 0.5;
-        }
-        if (dist < (50 + player.cells[i].radius)) {
-            deltaY *= dist / (50 + player.cells[i].radius);
-            deltaX *= dist / (50 + player.cells[i].radius);
-        }
-        if (!isNaN(deltaY)) {
-            player.cells[i].y += deltaY;
-        }
-        if (!isNaN(deltaX)) {
-            player.cells[i].x += deltaX;
-        }
-        // Find best solution.
-        for(var j=0; j<player.cells.length; j++) {
-            if(j != i && player.cells[i] !== undefined) {
-                var distance = Math.sqrt(Math.pow(player.cells[j].y-player.cells[i].y,2) + Math.pow(player.cells[j].x-player.cells[i].x,2));
-                var radiusTotal = (player.cells[i].radius + player.cells[j].radius);
-                if(distance < radiusTotal) {
-                    if(player.lastSplit > new Date().getTime() - 1000 * c.mergeTimer) {
-                        if(player.cells[i].x < player.cells[j].x) {
-                            player.cells[i].x--;
-                        } else if(player.cells[i].x > player.cells[j].x) {
-                            player.cells[i].x++;
-                        }
-                        if(player.cells[i].y < player.cells[j].y) {
-                            player.cells[i].y--;
-                        } else if((player.cells[i].y > player.cells[j].y)) {
-                            player.cells[i].y++;
-                        }
-                    }
-                    else if(distance < radiusTotal / 1.75) {
-                        player.cells[i].mass += player.cells[j].mass;
-                        player.cells[i].radius = util.massToRadius(player.cells[i].mass);
-                        player.cells.splice(j, 1);
-                    }
-                }
-            }
-        }
-        if(player.cells.length > i) {
-            var borderCalc = player.cells[i].radius / 3;
-            if (player.cells[i].x > c.gameWidth - borderCalc) {
-                player.cells[i].x = c.gameWidth - borderCalc;
-            }
-            if (player.cells[i].y > c.gameHeight - borderCalc) {
-                player.cells[i].y = c.gameHeight - borderCalc;
-            }
-            if (player.cells[i].x < borderCalc) {
-                player.cells[i].x = borderCalc;
-            }
-            if (player.cells[i].y < borderCalc) {
-                player.cells[i].y = borderCalc;
-            }
-            x += player.cells[i].x;
-            y += player.cells[i].y;
-        }
-    }
-    player.x = x/player.cells.length;
-    player.y = y/player.cells.length;
-}
-
-function moveMass(mass) {
-    var deg = Math.atan2(mass.target.y, mass.target.x);
-    var deltaY = mass.speed * Math.sin(deg);
-    var deltaX = mass.speed * Math.cos(deg);
-
-    mass.speed -= 0.5;
-    if(mass.speed < 0) {
-        mass.speed = 0;
-    }
-    if (!isNaN(deltaY)) {
-        mass.y += deltaY;
-    }
-    if (!isNaN(deltaX)) {
-        mass.x += deltaX;
-    }
-
-    var borderCalc = mass.radius + 5;
-
-    if (mass.x > c.gameWidth - borderCalc) {
-        mass.x = c.gameWidth - borderCalc;
-    }
-    if (mass.y > c.gameHeight - borderCalc) {
-        mass.y = c.gameHeight - borderCalc;
-    }
-    if (mass.x < borderCalc) {
-        mass.x = borderCalc;
-    }
-    if (mass.y < borderCalc) {
-        mass.y = borderCalc;
-    }
 }
 
 // Initial connection from the client to the server
 
-io.on('connection', function (connection) {
+io.on('connect', function (connection) {
     logger('A user connected!', connection.handshake.query.type);
 
     var type = connection.handshake.query.type;
@@ -348,6 +239,7 @@ io.on('connection', function (connection) {
 
     // Heartbeat function, update everytime.
     connection.on('0', function(target) {
+	logger("connection.on 0");
         currentPlayer.lastHeartbeat = new Date().getTime();
         if (target.x !== currentPlayer.x || target.y !== currentPlayer.y) {
             currentPlayer.target = target;
@@ -355,6 +247,7 @@ io.on('connection', function (connection) {
     });
 
     connection.on('1', function() {
+	logger("connection.on 1");
         // Fire food.
         for(var i=0; i<currentPlayer.cells.length; i++)
         {
@@ -384,6 +277,7 @@ io.on('connection', function (connection) {
         }
     });
     connection.on('2', function(virusCell) {
+	logger("connection.on 2");
         function splitCell(cell) {
             if(cell.mass >= c.defaultPlayerMass*2) {
                 cell.mass = cell.mass/2;
@@ -548,7 +442,6 @@ function moveloop() {
         tickPlayer(users[i]);
     }
     for (i=0; i < massFood.length; i++) {
-        if(massFood[i].speed > 0) moveMass(massFood[i]);
     }
 }
 
