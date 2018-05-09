@@ -13,6 +13,8 @@ var logger = function(...args) {
 
 logger("server.js starting up");
 
+app.use(express.static(__dirname + '/../client'));
+
 // Agar Game settings
 var conf = {
     "host": "0.0.0.0",
@@ -81,7 +83,7 @@ function add_player() {
 function Player() {
     this.alive = 1;
     this.dir = direction.up;
-    this.speed = 1.0;
+    this.dash = (Math.random() > 0.5);
     this.size = 25;
     this.position = {
 	x: Math.floor(Math.random() * (dimension.width-50)) + 25,
@@ -119,8 +121,6 @@ function init_game() {
 	add_player();
     }
 }
-
-app.use(express.static(__dirname + '/../client'));
 
 function update_viewport_scale(p) {
     p.scale = 1 + Math.min(2,(p.cells.length / 1000));
@@ -205,23 +205,35 @@ function tick_game() {
 	populate_all_cells(players[i]);
     }
 
+    var killer;
+
     for (i in players) {
 	if (players[i].alive) {
 	    move_player(players[i]);
-	    var killer = check_collision(players[i]);
+	    killer = check_collision(players[i]);
 	    if (killer) {
 		award_collision(players[i],killer);
-//		players[i].cells = [];
 		players[i].alive = 0;
 	    }
+	shift_player(players[i]);
 	}
     }
 
     remove_dead_players();
 
     for (i in players) {
+	if (players[i].alive && players[i].dash) {
+	    move_player(players[i]);
+	    killer = check_collision(players[i]);
+	    if (killer) {
+		award_collision(players[i],killer);
+		players[i].alive = 0;
+	    }
 	shift_player(players[i]);
+	}
     }
+
+    remove_dead_players();
 
     for (i in players) {
 	var player_id = players[i].id;
@@ -230,6 +242,7 @@ function tick_game() {
 	    player_socket.emit('s_update_players',players);
 	}
     }
+
     if (immortal_socket) {
 	immortal_socket.emit('s_update_players',players);
 	logger("Sent update");
@@ -301,8 +314,8 @@ function move_player(p) {
 	break;
     }
     
-    p.position.x += delta.x * p.speed;
-    p.position.y += delta.y * p.speed;
+    p.position.x += delta.x;
+    p.position.y += delta.y;
 
     if (p.position.x < 0) {
 	p.position.x = 0;
@@ -379,6 +392,7 @@ io.on('connect', function (socket) {
     });
 
     socket.on('disconnect', function () {
+	logger("Got disconnect");
         if (util.findIndex(users, currentPlayer.id) > -1)
             users.splice(util.findIndex(users, currentPlayer.id), 1);
         logger('[INFO] User ' + currentPlayer.name + ' disconnected!');
