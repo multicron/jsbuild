@@ -53,8 +53,6 @@ var map_ctx;
 var radar;
 var radar_ctx;
 
-var count = 0;
-
 var direction = {stopped: -1, up: 1, down: 2, left: 3, right: 4};
 
 var players = [];
@@ -86,14 +84,14 @@ function init() {
 
     for (var i=0;i<dimension.width;i++) {
 	all_cells[i]=[];
-	for (j=0;j<dimension.height;j++) {
+	for (var j=0;j<dimension.height;j++) {
 	    all_cells[i][j]=0;
 	}
     }
 
     // Add initial players to the players[] array
 
-    for (x=0;x<100;x++) {
+    for (var x=0;x<100;x++) {
 	add_player();
     }
 
