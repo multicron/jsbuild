@@ -62,11 +62,6 @@ var conf = {
 // Import utilities.
 var util = require('./lib/util');
 
-// Import quadtree.
-var quadtree = require('simple-quadtree');
-
-var tree = quadtree(0, 0, conf.gameWidth, conf.gameHeight);
-
 // For Blubio
 
 var direction = {stopped: -1, up: 1, down: 2, left: 3, right: 4};
@@ -87,7 +82,7 @@ var global = {
     smallblocks: 0,
     cellsize: 10,
     delaycount: 0,
-    minplayers: 50,
+    minplayers: 100,
     rotateview: false,
 };
 
@@ -152,7 +147,6 @@ function Player() {
     };
     this.scale  = 1.0;
     this.cells = [];
-    this.socket = undefined;
 }
 
 function init_game() {
@@ -291,6 +285,7 @@ function tick_game() {
     }
     if (immortal_socket) {
 	immortal_socket.emit('s_update_players',players);
+	logger("Sent update");
     }
 }
 
@@ -413,10 +408,13 @@ io.on('connect', function (socket) {
         massTotal = conf.defaultPlayerMass;
     }
 
-    var currentPlayer = new Player();
-    currentPlayer.id = socket.id;
-    players.push(currentPlayer);
-    sockets[currentPlayer.id] = socket;
+//    var currentPlayer = new Player();
+//    currentPlayer.id = socket.id;
+//    players.push(currentPlayer);
+//    sockets[currentPlayer.id] = socket;
+
+    var currentPlayer;
+
     immortal_socket = socket;
 
     socket.on('gotit', function (player) {
@@ -554,7 +552,6 @@ function tickPlayer(currentPlayer) {
                         num: i,
                         mass: user.cells[i].mass
                     };
-                    playerCollisions.push(response);
                 }
             }
         }
@@ -626,13 +623,6 @@ function tickPlayer(currentPlayer) {
         currentCell.radius = util.massToRadius(currentCell.mass);
         playerCircle.r = currentCell.radius;
 
-        tree.clear();
-        users.forEach(tree.put);
-        var playerCollisions = [];
-
-        var otherUsers =  tree.get(currentPlayer, check);
-
-        playerCollisions.forEach(collisionCheck);
     }
 }
 
@@ -779,7 +769,7 @@ function sendUpdates() {
 
 init_game();
 
-setInterval(tick_game, 10);
+setInterval(tick_game, 100);
 setInterval(log_status,5000);
 //setInterval(moveloop, 1000 / 60);
 //setInterval(sendUpdates, 1000 / conf.networkUpdateFactor);

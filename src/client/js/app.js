@@ -15,7 +15,7 @@ var logger = function(...args) {
               window.oRequestAnimationFrame      || 
               window.msRequestAnimationFrame     || 
               function(/* function */ callback, /* DOMElement */ element){
-                window.setTimeout(callback, 1000 / 60);
+                window.setTimeout(callback, 100);
               };
     })();
   
@@ -192,7 +192,7 @@ function setupSocket(socket) {
     });
 
     socket.on('s_update_players', function (data) {
-	logger("Got s_update_players",data);
+//	logger("Got s_update_players",data);
 	players = data;
     });
 
@@ -310,6 +310,7 @@ function draw_axes(ctx) {
 var delaycount = 0;
 
 function animate() {
+//    window.setTimeout(animate, 100);
     requestAnimFrame( animate );
 
     clear_board();
