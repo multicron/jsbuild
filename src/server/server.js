@@ -9,14 +9,14 @@ var SAT = require('sat');
 var sql = require ("mysql");
 var debug = require('debug')('blubio');
 
-var logger = function(args) {
-    debug(args);
+var logger = function(...args) {
+    debug(...args);
 };
 
 logger("server.js starting up");
 
 // Game settings.
-var c = {
+var conf = {
     "host": "0.0.0.0",
     "port": 3000,
     "logpath": "logger.php",
@@ -108,10 +108,10 @@ function movePlayer(player) {
 
 // Initial connection from the client to the server
 
-io.on('connect', function (connection) {
-    logger('A user connected!', connection.handshake.query.type);
+io.on('connect', function (socket) {
+    logger('A user connected!', socket.handshake);
 
-    var type = connection.handshake.query.type;
+    var type = socket.handshake.query.type;
     var radius = util.massToRadius(conf.defaultPlayerMass);
     var position = conf.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
 
@@ -128,7 +128,7 @@ io.on('connect', function (connection) {
     }
 
     var currentPlayer = {
-        id: connection.id,
+        id: socket.id,
         x: position.x,
         y: position.y,
         w: conf.defaultPlayerMass,
@@ -144,18 +144,18 @@ io.on('connect', function (connection) {
         }
     };
 
-    connection.on('gotit', function (player) {
+    socket.on('gotit', function (player) {
         logger('[INFO] Player ' + player.name + ' connecting!');
 
         if (util.findIndex(users, player.id) > -1) {
             logger('[INFO] Player ID is already connected, kicking.');
-            connection.disconnect();
+            socket.disconnect();
         } else if (!util.validNick(player.name)) {
-            connection.emit('kick', 'Invalid username.');
-            connection.disconnect();
+            socket.emit('kick', 'Invalid username.');
+            socket.disconnect();
         } else {
             logger('[INFO] Player ' + player.name + ' connected!');
-            connections[player.id] = connection;
+            connections[player.id] = socket;
 
             var radius = util.massToRadius(conf.defaultPlayerMass);
             var position = conf.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
@@ -184,7 +184,7 @@ io.on('connect', function (connection) {
 
             io.emit('playerJoin', { name: currentPlayer.name });
 
-            connection.emit('gameSetup', {
+            socket.emit('gameSetup', {
                 gameWidth: conf.gameWidth,
                 gameHeight: conf.gameHeight
             });
@@ -193,55 +193,55 @@ io.on('connect', function (connection) {
 
     });
 
-    connection.on('pingcheck', function () {
-        connection.emit('pongcheck');
+    socket.on('pingcheck', function () {
+        socket.emit('pongcheck');
     });
 
-    connection.on('windowResized', function (data) {
+    socket.on('windowResized', function (data) {
         currentPlayer.screenWidth = data.screenWidth;
         currentPlayer.screenHeight = data.screenHeight;
     });
 
-    connection.on('respawn', function () {
+    socket.on('respawn', function () {
         if (util.findIndex(users, currentPlayer.id) > -1)
             users.splice(util.findIndex(users, currentPlayer.id), 1);
-        connection.emit('welcome', currentPlayer);
+        socket.emit('welcome', currentPlayer);
         logger('[INFO] User ' + currentPlayer.name + ' respawned!');
     });
 
-    connection.on('disconnect', function () {
+    socket.on('disconnect', function () {
         if (util.findIndex(users, currentPlayer.id) > -1)
             users.splice(util.findIndex(users, currentPlayer.id), 1);
         logger('[INFO] User ' + currentPlayer.name + ' disconnected!');
 
-        connection.broadcast.emit('playerDisconnect', { name: currentPlayer.name });
+        socket.broadcast.emit('playerDisconnect', { name: currentPlayer.name });
     });
 
-    connection.on('playerChat', function(data) {
+    socket.on('playerChat', function(data) {
         var _sender = data.sender.replace(/(<([^>]+)>)/ig, '');
         var _message = data.message.replace(/(<([^>]+)>)/ig, '');
         if (conf.logChat === 1) {
             logger('[CHAT] [' + (new Date()).getHours() + ':' + (new Date()).getMinutes() + '] ' + _sender + ': ' + _message);
         }
-        connection.broadcast.emit('serverSendPlayerChat', {sender: _sender, message: _message.substring(0,35)});
+        socket.broadcast.emit('serverSendPlayerChat', {sender: _sender, message: _message.substring(0,35)});
     });
 
-    connection.on('pass', function(data) {
+    socket.on('pass', function(data) {
         if (data[0] === conf.adminPass) {
             logger('[ADMIN] ' + currentPlayer.name + ' just logged in as an admin!');
-            connection.emit('serverMSG', 'Welcome back ' + currentPlayer.name);
-            connection.broadcast.emit('serverMSG', currentPlayer.name + ' just logged in as admin!');
+            socket.emit('serverMSG', 'Welcome back ' + currentPlayer.name);
+            socket.broadcast.emit('serverMSG', currentPlayer.name + ' just logged in as admin!');
             currentPlayer.admin = true;
         } else {
             
             // TODO: Actually log incorrect passwords.
               logger('[ADMIN] ' + currentPlayer.name + ' attempted to log in with incorrect password.');
-              connection.emit('serverMSG', 'Password incorrect, attempt logged.');
+              socket.emit('serverMSG', 'Password incorrect, attempt logged.');
              pool.query('INSERT INTO logging SET name=' + currentPlayer.name + ', reason="Invalid login attempt as admin"');
         }
     });
 
-    connection.on('kick', function(data) {
+    socket.on('kick', function(data) {
         if (currentPlayer.admin) {
             var reason = '';
             var worked = false;
@@ -263,7 +263,7 @@ io.on('connect', function (connection) {
                     else {
                        logger('[ADMIN] User ' + users[e].name + ' kicked successfully by ' + currentPlayer.name);
                     }
-                    connection.emit('serverMSG', 'User ' + users[e].name + ' was kicked by ' + currentPlayer.name);
+                    socket.emit('serverMSG', 'User ' + users[e].name + ' was kicked by ' + currentPlayer.name);
                     connections[users[e].id].emit('kick', reason);
                     connections[users[e].id].disconnect();
                     users.splice(e, 1);
@@ -271,25 +271,25 @@ io.on('connect', function (connection) {
                 }
             }
             if (!worked) {
-                connection.emit('serverMSG', 'Could not locate user or user is an admin.');
+                socket.emit('serverMSG', 'Could not locate user or user is an admin.');
             }
         } else {
             logger('[ADMIN] ' + currentPlayer.name + ' is trying to use -kick but isn\'t an admin.');
-            connection.emit('serverMSG', 'You are not permitted to use this command.');
+            socket.emit('serverMSG', 'You are not permitted to use this command.');
         }
     });
 
     // Heartbeat function, update everytime.
-    connection.on('0', function(target) {
-	logger("connection.on 0");
+    socket.on('0', function(target) {
+	logger("socket.on 0");
         currentPlayer.lastHeartbeat = new Date().getTime();
         if (target.x !== currentPlayer.x || target.y !== currentPlayer.y) {
             currentPlayer.target = target;
         }
     });
 
-    connection.on('1', function() {
-	logger("connection.on 1");
+    socket.on('1', function() {
+	logger("socket.on 1");
         // Fire food.
         for(var i=0; i<currentPlayer.cells.length; i++)
         {
@@ -318,8 +318,8 @@ io.on('connect', function (connection) {
             }
         }
     });
-    connection.on('2', function(virusCell) {
-	logger("connection.on 2");
+    socket.on('2', function(virusCell) {
+	logger("socket.on 2");
         function splitCell(cell) {
             if(cell.mass >= conf.defaultPlayerMass*2) {
                 cell.mass = cell.mass/2;
