@@ -77,27 +77,8 @@ function init() {
     if (!socket) {
         socket = io({query:"type=player"});
         setupSocket(socket);
-	socket.emit("client_setup");
+	socket.emit("c_setup");
     }
-
-    // Initialize "all cells" array for collision detection
-
-    for (var i=0;i<dimension.width;i++) {
-	all_cells[i]=[];
-	for (var j=0;j<dimension.height;j++) {
-	    all_cells[i][j]=0;
-	}
-    }
-
-    // Add initial players to the players[] array
-
-    for (var x=0;x<100;x++) {
-	add_player();
-    }
-
-    // Pick someone to be the player shown on the viewport
-
-    viewport_player = players[0];
 
     // Canvases
 
@@ -291,37 +272,6 @@ function Player() {
     this.cells = [];
 }
 
-// Player factory
-
-function new_player() {
-    return {
-	alive: 1,
-	dir: direction.up,
-	speed: 1.0,
-	size: 100,
-	position: {
-	    x: Math.floor(Math.random() * (dimension.width-50)) + 25,
-	    y: Math.floor(Math.random() * (dimension.height-50)) + 25,
-	},
-	shade : {
-	    h: Math.floor(Math.random()*360),
-	    s: 50,
-	    l: 50,
-	},
-	shade_delta : {
-	    h: 3.0,
-	    s: 1.0,
-	    l: 0.5,
-	},
-	scale : 1.0,
-	cells: [],
-    };
-}
-
-function add_player() {
-    players.push(new Player());
-}
-
 function draw_axes(ctx) {
     for (x = -1000; x <= 1000; x+=10) {
 	ctx.beginPath();
@@ -374,139 +324,6 @@ function animate() {
 
     update_map(viewport_player);
 
-}
-
-function update_viewport_scale(p) {
-    p.scale = 1; // + Math.min(2,(p.cells.length / 1000));
-}
-
-function award_collision(killed,killer) {
-    killer.size += killed.cells.length;
-    killed.size = 1;
-    if (killed === viewport_player) {
-	viewport_player = killer;
-    }
-}
-
-function remove_dead_players() {
-    var i = players.length;
-    while (i--) {
-	if (!players[i].alive) {
-	    players.splice(i, 1);
-	} 
-    }
-}
-
-function shift_player(p) {
-
-    p.size += 0.01;
-    
-    p.cells.push({x: p.position.x,
-		  y: p.position.y
-		 });
-
-    if (p.cells.length >= p.size) {
-	var tail_position = p.cells.shift();
-    }
-}
-
-function turn_right(dir) {
-    switch (dir) {
-    case direction.up: 
-	return direction.right;
-    case direction.left: 
-	return direction.up;
-    case direction.down: 
-	return direction.left;
-    case direction.right: 
-	return direction.down;
-    }
-    return direction.stopped;
-}
-
-function turn_left(dir) {
-    switch (dir) {
-    case direction.up: 
-	return direction.left;
-    case direction.left: 
-	return direction.down;
-    case direction.down: 
-	return direction.right;
-    case direction.right: 
-	return direction.up;
-    }
-    return direction.stopped;
-}
-
-function move_player(p) {
-
-    var delta = {
-	x: 0,
-	y: 0,
-    };
-    
-    var rnd = Math.random();
-
-    if (rnd < 0.05) {
-	p.dir = turn_left(p.dir);
-    }
-    else if (rnd < 0.10) {
-	p.dir = turn_right(p.dir);
-    }
-	
-    switch (p.dir) {
-    case direction.right: 
-	delta.x = 1;
-	delta.y = 0;
-	break;
-    case direction.down: 
-	delta.x = 0;
-	delta.y = 1;
-	break;
-    case direction.left: 
-	delta.x = -1;
-	delta.y = 0;
-	break;
-    case direction.up: 
-	delta.x = 0;
-	delta.y = -1;
-	break;
-    case direction.stopped:
-	delta.x = 0;
-	delta.y = 0;
-	break;
-    }
-    
-    p.position.x += delta.x * p.speed;
-    p.position.y += delta.y * p.speed;
-
-    if (p.position.x < 0) {
-	p.position.x = 0;
-	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
-    }
-
-    if (p.position.y < 0) {
-	p.position.y = 0;
-	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
-    }
-
-    if (p.position.x >= dimension.width) {
-	p.position.x = dimension.width - 1;
-	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
-    }
-
-    if (p.position.y >= dimension.height) {
-	p.position.y = dimension.height - 1;
-	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
-    }
-}
-
-function clear_all_cells() {
-    for (var i=0;i<dimension.width;i++) {
-	for (j=0;j<dimension.height;j++) {
-	    all_cells[i][j]=0;
-	}
-    }
 }
 
 function update_viewport(p) {
@@ -589,12 +406,6 @@ function update_map(p) {
 		     );
 }
 
-function populate_all_cells(p) {
-    for (var i in p.cells) {
-	all_cells[p.cells[i].x][p.cells[i].y] = p;
-    }
-}
-
 function refresh_player(p) {
 //    adjust_shade(p.shade,p.shade_delta,p.shade);
 
@@ -621,16 +432,6 @@ function refresh_player(p) {
     }
 }
 
-function draw_all_cells() {
-    for (var i=0;i<dimension.width;i++) {
-	for (j=0;j<dimension.height;j++) {
-	    if (all_cells[i][j]) {
-		draw_cell({x:i,y:j},{r:128,g:128,b:128});
-	    }
-	}
-    }
-}
-
 function draw_cell(cell,shade) {
     var color = 'hsl('+shade.h+','+shade.l+'%,'+shade.s+'%)';
 
@@ -653,19 +454,6 @@ function draw_cell(cell,shade) {
 function clear_board() {
     board_ctx.clearRect(0,0,board_ctx.canvas.width,
 			 board_ctx.canvas.height);
-}
-
-function check_collision(p) {
-    var c = all_cells[p.position.x][p.position.y];
-
-    if (c === p) {
-	return false;
-    }
-    if (!c.alive) {
-	return false;
-    }
-
-    return c;
 }
 
 function adjust_shade(shade, delta, orig) {

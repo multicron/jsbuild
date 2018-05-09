@@ -87,7 +87,7 @@ var global = {
     smallblocks: 0,
     cellsize: 10,
     delaycount: 0,
-    minplayers: 1,
+    minplayers: 50,
     rotateview: false,
 };
 
@@ -112,6 +112,7 @@ var massFood = [];
 var food = [];
 var virus = [];
 var sockets = {};
+var immortal_socket;
 
 var leaderboard = [];
 var leaderboardChanged = false;
@@ -181,7 +182,7 @@ function movePlayer(player) {
 }
 
 function update_viewport_scale(p) {
-    p.scale = 1; // + Math.min(2,(p.cells.length / 1000));
+    p.scale = 1 + Math.min(2,(p.cells.length / 1000));
 }
 
 function populate_all_cells(p) {
@@ -287,6 +288,9 @@ function tick_game() {
 	if (player_socket) {
 	    player_socket.emit('s_update_players',players);
 	}
+    }
+    if (immortal_socket) {
+	immortal_socket.emit('s_update_players',players);
     }
 }
 
@@ -413,6 +417,7 @@ io.on('connect', function (socket) {
     currentPlayer.id = socket.id;
     players.push(currentPlayer);
     sockets[currentPlayer.id] = socket;
+    immortal_socket = socket;
 
     socket.on('gotit', function (player) {
         logger('[INFO] Player ' + player.name + ' connecting!');
@@ -680,7 +685,7 @@ function gameloop() {
 
 function log_status() {
     players.forEach( function (player) {
-	logger("Player: ",player.id,player.alive,player.cells);
+	logger("Player: ",player.id,player.alive,player.size);
     });
 }
 
@@ -774,10 +779,10 @@ function sendUpdates() {
 
 init_game();
 
-setInterval(moveloop, 1000 / 60);
-setInterval(tick_game, 50);
-setInterval(sendUpdates, 1000 / conf.networkUpdateFactor);
+setInterval(tick_game, 10);
 setInterval(log_status,5000);
+//setInterval(moveloop, 1000 / 60);
+//setInterval(sendUpdates, 1000 / conf.networkUpdateFactor);
 
 
 // Don't touch, IP configurations.
