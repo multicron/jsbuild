@@ -212,6 +212,7 @@ function setupSocket(socket) {
 
     socket.on('s_update_players', function (data) {
 	logger("Got s_update_players",data);
+	update_players(data);
     });
 
     // Handle movement.

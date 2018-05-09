@@ -119,6 +119,7 @@ var leaderboardChanged = false;
 var V = SAT.Vector;
 var C = SAT.Circle;
 
+var players = [];
 var robot_counter = 0;
 
 function add_player() {
@@ -695,7 +696,7 @@ function gameloop() {
 
 function log_status() {
     players.forEach( function (player) {
-	logger("Player: ",player);
+	logger("Player: ",player.id,player.alive,player.cells);
     });
 }
 
