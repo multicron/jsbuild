@@ -71,8 +71,6 @@ var tree = quadtree(0, 0, conf.gameWidth, conf.gameHeight);
 
 var direction = {stopped: -1, up: 1, down: 2, left: 3, right: 4};
 
-var players = [];
-
 var all_cells = [];
 
 var viewport_player;
@@ -108,9 +106,6 @@ var map_dim = {
     height: dimension.width / 10,
 };
 
-var players = [];
-var all_cells = [];
-
 // From Agar
 var users = [];
 var massFood = [];
@@ -124,8 +119,12 @@ var leaderboardChanged = false;
 var V = SAT.Vector;
 var C = SAT.Circle;
 
+var robot_counter = 0;
+
 function add_player() {
-    players.push(new Player());
+    var player = new Player();
+    player.id = "R"+robot_counter++;
+    players.push(player);
 }
 
 // Player Constructor
@@ -151,6 +150,7 @@ function Player() {
     };
     this.scale  = 1.0;
     this.cells = [];
+    this.socket = undefined;
 }
 
 function init_game() {
@@ -167,7 +167,7 @@ function init_game() {
 
     // Add initial players to the players[] array
 
-    for (var x=0;x<5;x++) {
+    for (var x=0;x<3;x++) {
 	add_player();
     }
 }
@@ -278,6 +278,30 @@ function tick_game() {
 
     for (i in players) {
 	shift_player(players[i]);
+    }
+
+    for (i in players) {
+	if (players[i].socket) {
+	    send_players_update(players[i]);
+	}
+    }
+}
+
+function send_players_update(recipient) {
+    for (var i in players) {
+	var p = players[i];
+	recipient.socket.emit('s_update_players',{
+	    id:           p.id,
+	    alive:        p.alive,
+	    dir:          p.dir,
+	    speed:        p.speed,
+	    size:         p.size,
+	    position:     p.position,
+	    shade:        p.shade,
+	    shade_delta:  p.shade.delta,
+	    scale:        p.scale,
+	    cells:        p.cells,
+	});
     }
 }
 
@@ -401,6 +425,8 @@ io.on('connect', function (socket) {
     }
 
     var currentPlayer = new Player();
+    currentPlayer.socket = socket;
+    currentPlayer.id = socket.id;
     players.push(currentPlayer);
 
     socket.on('gotit', function (player) {
@@ -763,10 +789,8 @@ function sendUpdates() {
 
 init_game();
 
-// Initial connection from the client to the server
-
 setInterval(moveloop, 1000 / 60);
-setInterval(gameloop, 1000);
+setInterval(tick_game, 100);
 setInterval(sendUpdates, 1000 / conf.networkUpdateFactor);
 setInterval(log_status,5000);
 

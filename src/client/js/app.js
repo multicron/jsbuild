@@ -1,9 +1,9 @@
 var io = require('socket.io-client');
 var socket;
 
-var logger = function(args) {
+var logger = function(...args) {
     if (console && console.log) {
-        console.log(args);
+        console.log(...args);
     }
 };
 
@@ -208,6 +208,10 @@ function setupSocket(socket) {
     });
 
     socket.on('serverMSG', function (data) {
+    });
+
+    socket.on('s_update_players', function (data) {
+	logger("Got s_update_players",data);
     });
 
     // Handle movement.
