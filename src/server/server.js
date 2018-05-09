@@ -179,6 +179,16 @@ app.use(express.static(__dirname + '/../client'));
 function movePlayer(player) {
 }
 
+function update_viewport_scale(p) {
+    p.scale = 1; // + Math.min(2,(p.cells.length / 1000));
+}
+
+function populate_all_cells(p) {
+    for (var i in p.cells) {
+	all_cells[p.cells[i].x][p.cells[i].y] = p;
+    }
+}
+
 function award_collision(killed,killer) {
     killer.size += killed.cells.length;
     killed.size = 1;
@@ -235,6 +245,66 @@ function turn_left(dir) {
 	return direction.up;
     }
     return direction.stopped;
+}
+
+function tick_game() {
+
+    while (players.length < global.minplayers) {
+	add_player();
+    }
+
+    clear_all_cells();
+
+    var i;
+
+    for (i in players) {
+	update_viewport_scale(players[i]);
+	populate_all_cells(players[i]);
+    }
+
+    for (i in players) {
+	if (players[i].alive) {
+	    move_player(players[i]);
+	    var killer = check_collision(players[i]);
+	    if (killer) {
+		award_collision(players[i],killer);
+//		players[i].cells = [];
+		players[i].alive = 0;
+	    }
+	}
+    }
+
+    remove_dead_players();
+
+    for (i in players) {
+	shift_player(players[i]);
+    }
+}
+
+function check_collision(p) {
+    var c = all_cells[p.position.x][p.position.y];
+
+    if (c === p) {
+	return false;
+    }
+    if (!c.alive) {
+	return false;
+    }
+
+    return c;
+}
+
+function shift_player(p) {
+
+    p.size += 0.01;
+    
+    p.cells.push({x: p.position.x,
+		  y: p.position.y
+		 });
+
+    if (p.cells.length >= p.size) {
+	var tail_position = p.cells.shift();
+    }
 }
 
 function move_player(p) {
