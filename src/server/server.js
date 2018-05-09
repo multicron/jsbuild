@@ -411,128 +411,15 @@ io.on('connect', function (socket) {
         socket.broadcast.emit('serverSendPlayerChat', {sender: _sender, message: _message.substring(0,35)});
     });
 
-    socket.on('pass', function(data) {
-        if (data[0] === conf.adminPass) {
-            logger('[ADMIN] ' + currentPlayer.name + ' just logged in as an admin!');
-            socket.emit('serverMSG', 'Welcome back ' + currentPlayer.name);
-            socket.broadcast.emit('serverMSG', currentPlayer.name + ' just logged in as admin!');
-            currentPlayer.admin = true;
-        } else {
-            
-            // TODO: Actually log incorrect passwords.
-              logger('[ADMIN] ' + currentPlayer.name + ' attempted to log in with incorrect password.');
-              socket.emit('serverMSG', 'Password incorrect, attempt logged.');
-        }
-    });
-
     socket.on('kick', function(data) {
-        if (currentPlayer.admin) {
-            var reason = '';
-            var worked = false;
-            for (var e = 0; e < users.length; e++) {
-                if (users[e].name === data[0] && !users[e].admin && !worked) {
-                    if (data.length > 1) {
-                        for (var f = 1; f < data.length; f++) {
-                            if (f === data.length) {
-                                reason = reason + data[f];
-                            }
-                            else {
-                                reason = reason + data[f] + ' ';
-                            }
-                        }
-                    }
-                    if (reason !== '') {
-                       logger('[ADMIN] User ' + users[e].name + ' kicked successfully by ' + currentPlayer.name + ' for reason ' + reason);
-                    }
-                    else {
-                       logger('[ADMIN] User ' + users[e].name + ' kicked successfully by ' + currentPlayer.name);
-                    }
-                    socket.emit('serverMSG', 'User ' + users[e].name + ' was kicked by ' + currentPlayer.name);
-                    sockets[users[e].id].emit('kick', reason);
-                    sockets[users[e].id].disconnect();
-                    users.splice(e, 1);
-                    worked = true;
-                }
-            }
-            if (!worked) {
-                socket.emit('serverMSG', 'Could not locate user or user is an admin.');
-            }
-        } else {
-            logger('[ADMIN] ' + currentPlayer.name + ' is trying to use -kick but isn\'t an admin.');
-            socket.emit('serverMSG', 'You are not permitted to use this command.');
-        }
     });
 
-    // Heartbeat function, update everytime.
+    // Heartbeat function, update everytime.  What is target for?
     socket.on('0', function(target) {
 	logger("socket.on 0");
         currentPlayer.lastHeartbeat = new Date().getTime();
         if (target.x !== currentPlayer.x || target.y !== currentPlayer.y) {
             currentPlayer.target = target;
-        }
-    });
-
-    socket.on('1', function() {
-	logger("socket.on 1");
-        // Fire food.
-        for(var i=0; i<currentPlayer.cells.length; i++)
-        {
-            if(((currentPlayer.cells[i].mass >= conf.defaultPlayerMass + conf.fireFood) && conf.fireFood > 0) || (currentPlayer.cells[i].mass >= 20 && conf.fireFood === 0)){
-                var masa = 1;
-                if(conf.fireFood > 0)
-                    masa = conf.fireFood;
-                else
-                    masa = currentPlayer.cells[i].mass*0.1;
-                currentPlayer.cells[i].mass -= masa;
-                currentPlayer.massTotal -=masa;
-                massFood.push({
-                    id: currentPlayer.id,
-                    num: i,
-                    masa: masa,
-                    hue: currentPlayer.hue,
-                    target: {
-                        x: currentPlayer.x - currentPlayer.cells[i].x + currentPlayer.target.x,
-                        y: currentPlayer.y - currentPlayer.cells[i].y + currentPlayer.target.y
-                    },
-                    x: currentPlayer.cells[i].x,
-                    y: currentPlayer.cells[i].y,
-                    radius: util.massToRadius(masa),
-                    speed: 25
-                });
-            }
-        }
-    });
-    socket.on('2', function(virusCell) {
-	logger("socket.on 2");
-        function splitCell(cell) {
-            if(cell.mass >= conf.defaultPlayerMass*2) {
-                cell.mass = cell.mass/2;
-                cell.radius = util.massToRadius(cell.mass);
-                currentPlayer.cells.push({
-                    mass: cell.mass,
-                    x: cell.x,
-                    y: cell.y,
-                    radius: cell.radius,
-                    speed: 25
-                });
-            }
-        }
-
-        if(currentPlayer.cells.length < conf.limitSplit && currentPlayer.massTotal >= conf.defaultPlayerMass*2) {
-            //Split single cell from virus
-            if(virusCell) {
-              splitCell(currentPlayer.cells[virusCell]);
-            }
-            else {
-              //Split all cells
-              if(currentPlayer.cells.length < conf.limitSplit && currentPlayer.massTotal >= conf.defaultPlayerMass*2) {
-                  var numMax = currentPlayer.cells.length;
-                  for(var d=0; d<numMax; d++) {
-                      splitCell(currentPlayer.cells[d]);
-                  }
-              }
-            }
-            currentPlayer.lastSplit = new Date().getTime();
         }
     });
 });
