@@ -212,7 +212,7 @@ function setupSocket(socket) {
 
     socket.on('s_update_players', function (data) {
 	logger("Got s_update_players",data);
-	update_players(data);
+	players = data;
     });
 
     // Handle movement.
@@ -362,44 +362,13 @@ var delaycount = 0;
 function animate() {
     requestAnimFrame( animate );
 
-    while (players.length < global.minplayers) {
-	add_player();
-    }
-
-    if (global.delaycount && delaycount++%global.delaycount) {
-	return;
-    }
-
     clear_board();
-    clear_all_cells();
 
-    var i;
-
-    for (i in players) {
-	update_viewport_scale(players[i]);
-	populate_all_cells(players[i]);
-    }
-
-    for (i in players) {
-	if (players[i].alive) {
-	    move_player(players[i]);
-	    var killer = check_collision(players[i]);
-	    if (killer) {
-		award_collision(players[i],killer);
-//		players[i].cells = [];
-		players[i].alive = 0;
-	    }
-	}
-    }
-
-    remove_dead_players();
-
-    for (i in players) {
-	shift_player(players[i]);
+    for (var i in players) {
 	refresh_player(players[i]);
     }
 
-//    draw_all_cells();
+    viewport_player = players[0];
 
     update_viewport(viewport_player);
 

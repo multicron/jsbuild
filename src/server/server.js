@@ -168,7 +168,7 @@ function init_game() {
 
     // Add initial players to the players[] array
 
-    for (var x=0;x<3;x++) {
+    for (var x=0;x<100;x++) {
 	add_player();
     }
 }
@@ -282,27 +282,11 @@ function tick_game() {
     }
 
     for (i in players) {
-	if (players[i].socket) {
-	    send_players_update(players[i]);
+	var player_id = players[i].id;
+	var player_socket = sockets[player_id];
+	if (player_socket) {
+	    player_socket.emit('s_update_players',players);
 	}
-    }
-}
-
-function send_players_update(recipient) {
-    for (var i in players) {
-	var p = players[i];
-	recipient.socket.emit('s_update_players',{
-	    id:           p.id,
-	    alive:        p.alive,
-	    dir:          p.dir,
-	    speed:        p.speed,
-	    size:         p.size,
-	    position:     p.position,
-	    shade:        p.shade,
-	    shade_delta:  p.shade.delta,
-	    scale:        p.scale,
-	    cells:        p.cells,
-	});
     }
 }
 
@@ -426,9 +410,9 @@ io.on('connect', function (socket) {
     }
 
     var currentPlayer = new Player();
-    currentPlayer.socket = socket;
     currentPlayer.id = socket.id;
     players.push(currentPlayer);
+    sockets[currentPlayer.id] = socket;
 
     socket.on('gotit', function (player) {
         logger('[INFO] Player ' + player.name + ' connecting!');
@@ -791,7 +775,7 @@ function sendUpdates() {
 init_game();
 
 setInterval(moveloop, 1000 / 60);
-setInterval(tick_game, 100);
+setInterval(tick_game, 50);
 setInterval(sendUpdates, 1000 / conf.networkUpdateFactor);
 setInterval(log_status,5000);
 
