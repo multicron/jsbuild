@@ -508,45 +508,6 @@ io.on('connect', function (socket) {
     });
 });
 
-function gameloop() {
-    if (users.length > 0) {
-        users.sort( function(a, b) { return b.massTotal - a.massTotal; });
-
-        var topUsers = [];
-
-        for (var i = 0; i < Math.min(10, users.length); i++) {
-            if(users[i].type == 'player') {
-                topUsers.push({
-                    id: users[i].id,
-                    name: users[i].name
-                });
-            }
-        }
-        if (isNaN(leaderboard) || leaderboard.length !== topUsers.length) {
-            leaderboard = topUsers;
-            leaderboardChanged = true;
-        }
-        else {
-            for (i = 0; i < leaderboard.length; i++) {
-                if (leaderboard[i].id !== topUsers[i].id) {
-                    leaderboard = topUsers;
-                    leaderboardChanged = true;
-                    break;
-                }
-            }
-        }
-        for (i = 0; i < users.length; i++) {
-            for(var z=0; z < users[i].cells.length; z++) {
-                if (users[i].cells[z].mass * (1 - (conf.massLossRate / 1000)) > conf.defaultPlayerMass && users[i].massTotal > conf.minMassLoss) {
-                    var massLoss = users[i].cells[z].mass * (1 - (conf.massLossRate / 1000));
-                    users[i].massTotal -= users[i].cells[z].mass - massLoss;
-                    users[i].cells[z].mass = massLoss;
-                }
-            }
-        }
-    }
-}
-
 function log_status() {
     players.forEach( function (player) {
 	logger("Player: ",player.id,player.alive,player.size);
