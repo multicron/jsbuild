@@ -5,7 +5,6 @@ var express = require('express');
 var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
-var SAT = require('sat');
 var debug = require('debug')('blubio');
 
 var logger = function(...args) {
@@ -63,19 +62,10 @@ var map_dim = {
     height: dimension.width / 10,
 };
 
-// From Agar
 var users = [];
-var massFood = [];
-var food = [];
-var virus = [];
 var sockets = {};
 var immortal_socket;
 
-var leaderboard = [];
-var leaderboardChanged = false;
-
-var V = SAT.Vector;
-var C = SAT.Circle;
 
 var players = [];
 var robot_counter = 0;
