@@ -15,8 +15,50 @@ var logger = function(args) {
 
 logger("server.js starting up");
 
-// Import game settings.
-var c = require('../../config.json');
+// Game settings.
+var c = {
+    "host": "0.0.0.0",
+    "port": 3000,
+    "logpath": "logger.php",
+    "foodMass": 1,
+    "fireFood": 20,
+    "limitSplit": 16,
+    "defaultPlayerMass": 10,
+	"virus": {
+    "fill": "#33ff33",
+  	"stroke": "#19D119",
+		"strokeWidth": 20,
+		"defaultMass": {
+            "from": 100,
+            "to": 150
+        },
+		"splitMass": 180
+	},
+    "gameWidth": 5000,
+    "gameHeight": 5000,
+    "adminPass": "DEFAULT",
+    "gameMass": 20000,
+    "maxFood": 1000,
+    "maxVirus": 50,
+    "slowBase": 4.5,
+    "logChat": 0,
+    "networkUpdateFactor": 40,
+    "maxHeartbeatInterval": 5000,
+    "foodUniformDisposition": true,
+    "virusUniformDisposition": false,
+    "newPlayerInitialPosition": "farthest",
+    "massLossRate": 1,
+    "minMassLoss": 50,
+    "mergeTimer": 15,
+    "sqlinfo":{
+      "connectionLimit": 100,
+      "host": "DEFAULT",
+      "user": "root",
+      "password": "DEFAULT",
+      "database": "DEFAULT",
+      "debug": false
+    }
+};
 
 // Import utilities.
 var util = require('./lib/util');
@@ -25,9 +67,9 @@ var util = require('./lib/util');
 var quadtree = require('simple-quadtree');
 
 //call sqlinfo
-var s = c.sqlinfo;
+var s = conf.sqlinfo;
 
-var tree = quadtree(0, 0, c.gameWidth, c.gameHeight);
+var tree = quadtree(0, 0, conf.gameWidth, conf.gameHeight);
 
 var users = [];
 var massFood = [];
@@ -57,7 +99,7 @@ if(s.host !== "DEFAULT") {
     });
 }
 
-var initMassLog = util.log(c.defaultPlayerMass, c.slowBase);
+var initMassLog = util.log(conf.defaultPlayerMass, conf.slowBase);
 
 app.use(express.static(__dirname + '/../client'));
 
@@ -70,27 +112,27 @@ io.on('connect', function (connection) {
     logger('A user connected!', connection.handshake.query.type);
 
     var type = connection.handshake.query.type;
-    var radius = util.massToRadius(c.defaultPlayerMass);
-    var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
+    var radius = util.massToRadius(conf.defaultPlayerMass);
+    var position = conf.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
 
     var cells = [];
     var massTotal = 0;
     if(type === 'player') {
         cells = [{
-            mass: c.defaultPlayerMass,
+            mass: conf.defaultPlayerMass,
             x: position.x,
             y: position.y,
             radius: radius
         }];
-        massTotal = c.defaultPlayerMass;
+        massTotal = conf.defaultPlayerMass;
     }
 
     var currentPlayer = {
         id: connection.id,
         x: position.x,
         y: position.y,
-        w: c.defaultPlayerMass,
-        h: c.defaultPlayerMass,
+        w: conf.defaultPlayerMass,
+        h: conf.defaultPlayerMass,
         cells: cells,
         massTotal: massTotal,
         hue: Math.round(Math.random() * 360),
@@ -115,8 +157,8 @@ io.on('connect', function (connection) {
             logger('[INFO] Player ' + player.name + ' connected!');
             connections[player.id] = connection;
 
-            var radius = util.massToRadius(c.defaultPlayerMass);
-            var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
+            var radius = util.massToRadius(conf.defaultPlayerMass);
+            var position = conf.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
 
             player.x = position.x;
             player.y = position.y;
@@ -124,12 +166,12 @@ io.on('connect', function (connection) {
             player.target.y = 0;
             if(type === 'player') {
                 player.cells = [{
-                    mass: c.defaultPlayerMass,
+                    mass: conf.defaultPlayerMass,
                     x: position.x,
                     y: position.y,
                     radius: radius
                 }];
-                player.massTotal = c.defaultPlayerMass;
+                player.massTotal = conf.defaultPlayerMass;
             }
             else {
                  player.cells = [];
@@ -143,8 +185,8 @@ io.on('connect', function (connection) {
             io.emit('playerJoin', { name: currentPlayer.name });
 
             connection.emit('gameSetup', {
-                gameWidth: c.gameWidth,
-                gameHeight: c.gameHeight
+                gameWidth: conf.gameWidth,
+                gameHeight: conf.gameHeight
             });
             logger('Total players: ' + users.length);
         }
@@ -178,14 +220,14 @@ io.on('connect', function (connection) {
     connection.on('playerChat', function(data) {
         var _sender = data.sender.replace(/(<([^>]+)>)/ig, '');
         var _message = data.message.replace(/(<([^>]+)>)/ig, '');
-        if (c.logChat === 1) {
+        if (conf.logChat === 1) {
             logger('[CHAT] [' + (new Date()).getHours() + ':' + (new Date()).getMinutes() + '] ' + _sender + ': ' + _message);
         }
         connection.broadcast.emit('serverSendPlayerChat', {sender: _sender, message: _message.substring(0,35)});
     });
 
     connection.on('pass', function(data) {
-        if (data[0] === c.adminPass) {
+        if (data[0] === conf.adminPass) {
             logger('[ADMIN] ' + currentPlayer.name + ' just logged in as an admin!');
             connection.emit('serverMSG', 'Welcome back ' + currentPlayer.name);
             connection.broadcast.emit('serverMSG', currentPlayer.name + ' just logged in as admin!');
@@ -251,10 +293,10 @@ io.on('connect', function (connection) {
         // Fire food.
         for(var i=0; i<currentPlayer.cells.length; i++)
         {
-            if(((currentPlayer.cells[i].mass >= c.defaultPlayerMass + c.fireFood) && c.fireFood > 0) || (currentPlayer.cells[i].mass >= 20 && c.fireFood === 0)){
+            if(((currentPlayer.cells[i].mass >= conf.defaultPlayerMass + conf.fireFood) && conf.fireFood > 0) || (currentPlayer.cells[i].mass >= 20 && conf.fireFood === 0)){
                 var masa = 1;
-                if(c.fireFood > 0)
-                    masa = c.fireFood;
+                if(conf.fireFood > 0)
+                    masa = conf.fireFood;
                 else
                     masa = currentPlayer.cells[i].mass*0.1;
                 currentPlayer.cells[i].mass -= masa;
@@ -279,7 +321,7 @@ io.on('connect', function (connection) {
     connection.on('2', function(virusCell) {
 	logger("connection.on 2");
         function splitCell(cell) {
-            if(cell.mass >= c.defaultPlayerMass*2) {
+            if(cell.mass >= conf.defaultPlayerMass*2) {
                 cell.mass = cell.mass/2;
                 cell.radius = util.massToRadius(cell.mass);
                 currentPlayer.cells.push({
@@ -292,14 +334,14 @@ io.on('connect', function (connection) {
             }
         }
 
-        if(currentPlayer.cells.length < c.limitSplit && currentPlayer.massTotal >= c.defaultPlayerMass*2) {
+        if(currentPlayer.cells.length < conf.limitSplit && currentPlayer.massTotal >= conf.defaultPlayerMass*2) {
             //Split single cell from virus
             if(virusCell) {
               splitCell(currentPlayer.cells[virusCell]);
             }
             else {
               //Split all cells
-              if(currentPlayer.cells.length < c.limitSplit && currentPlayer.massTotal >= c.defaultPlayerMass*2) {
+              if(currentPlayer.cells.length < conf.limitSplit && currentPlayer.massTotal >= conf.defaultPlayerMass*2) {
                   var numMax = currentPlayer.cells.length;
                   for(var d=0; d<numMax; d++) {
                       splitCell(currentPlayer.cells[d]);
@@ -312,8 +354,8 @@ io.on('connect', function (connection) {
 });
 
 function tickPlayer(currentPlayer) {
-    if(currentPlayer.lastHeartbeat < new Date().getTime() - c.maxHeartbeatInterval) {
-        connections[currentPlayer.id].emit('kick', 'Last heartbeat received over ' + c.maxHeartbeatInterval + ' ago.');
+    if(currentPlayer.lastHeartbeat < new Date().getTime() - conf.maxHeartbeatInterval) {
+        connections[currentPlayer.id].emit('kick', 'Last heartbeat received over ' + conf.maxHeartbeatInterval + ' ago.');
         connections[currentPlayer.id].disconnect();
     }
 
@@ -421,7 +463,7 @@ function tickPlayer(currentPlayer) {
 
         if(typeof(currentCell.speed) == "undefined")
             currentCell.speed = 6.25;
-        masaGained += (foodEaten.length * c.foodMass);
+        masaGained += (foodEaten.length * conf.foodMass);
         currentCell.mass += masaGained;
         currentPlayer.massTotal += masaGained;
         currentCell.radius = util.massToRadius(currentCell.mass);
@@ -474,8 +516,8 @@ function gameloop() {
         }
         for (i = 0; i < users.length; i++) {
             for(var z=0; z < users[i].cells.length; z++) {
-                if (users[i].cells[z].mass * (1 - (c.massLossRate / 1000)) > c.defaultPlayerMass && users[i].massTotal > c.minMassLoss) {
-                    var massLoss = users[i].cells[z].mass * (1 - (c.massLossRate / 1000));
+                if (users[i].cells[z].mass * (1 - (conf.massLossRate / 1000)) > conf.defaultPlayerMass && users[i].massTotal > conf.minMassLoss) {
+                    var massLoss = users[i].cells[z].mass * (1 - (conf.massLossRate / 1000));
                     users[i].massTotal -= users[i].cells[z].mass - massLoss;
                     users[i].cells[z].mass = massLoss;
                 }
@@ -489,8 +531,8 @@ function sendUpdates() {
 
         // center the view if x/y is undefined, this will happen for spectators
 
-        u.x = u.x || c.gameWidth / 2;
-        u.y = u.y || c.gameHeight / 2;
+        u.x = u.x || conf.gameWidth / 2;
+        u.y = u.y || conf.gameHeight / 2;
 
 	// This only updates stuff that's visible
 
@@ -574,11 +616,11 @@ function sendUpdates() {
 
 setInterval(moveloop, 1000 / 60);
 setInterval(gameloop, 1000);
-setInterval(sendUpdates, 1000 / c.networkUpdateFactor);
+setInterval(sendUpdates, 1000 / conf.networkUpdateFactor);
 
 // Don't touch, IP configurations.
-var ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || c.host;
-var serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || c.port;
+var ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || conf.host;
+var serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || conf.port;
 http.listen( serverport, ipaddress, function() {
     logger('[DEBUG] Listening on ' + ipaddress + ':' + serverport);
 });
