@@ -363,6 +363,20 @@ io.on('connect', function (socket) {
 
     immortal_socket = socket;
 
+    (function () {
+	var emit = socket.emit,
+        onevent = socket.onevent;
+	
+	socket.emit = function () {
+	    logger('socket.io', 'emit', arguments[0]);
+            emit.apply(socket, arguments);
+	};
+	socket.onevent = function (packet) {
+            logger('socket.io', 'on', Array.prototype.slice.call(packet.data || []));
+            onevent.apply(socket, arguments);
+	};
+    }());
+
     socket.on('gotit', function (player) {
         logger('[INFO] Player ' + player.name + ' connecting!');
 
