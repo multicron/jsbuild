@@ -196,33 +196,6 @@ function setupSocket(socket) {
 	players = data;
     });
 
-    // Handle movement.
-    socket.on('serverTellPlayerMove', function (userData, foodsList, massList, virusList) {
-        var playerData;
-        for(var i =0; i< userData.length; i++) {
-            if(typeof(userData[i].id) == "undefined") {
-                playerData = userData[i];
-                i = userData.length;
-            }
-        }
-        if(global.playerType == 'player') {
-            var xoffset = player.x - playerData.x;
-            var yoffset = player.y - playerData.y;
-
-            player.x = playerData.x;
-            player.y = playerData.y;
-            player.hue = playerData.hue;
-            player.massTotal = playerData.massTotal;
-            player.cells = playerData.cells;
-            player.xoffset = isNaN(xoffset) ? 0 : xoffset;
-            player.yoffset = isNaN(yoffset) ? 0 : yoffset;
-        }
-        users = userData;
-        foods = foodsList;
-        viruses = virusList;
-        fireFood = massList;
-    });
-
     socket.on('player_died', function () {
         global.gameStart = false;
         global.died = true;
