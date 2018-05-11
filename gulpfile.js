@@ -8,9 +8,11 @@ var mocha = require('gulp-mocha');
 var todo = require('gulp-todo');
 var webpack = require('webpack-stream');
 var fs = require('fs');
+var obfuscator = require('gulp-javascript-obfuscator');
+var debug = require('gulp-debug');
+var pump = require('pump');
 
-
-gulp.task('build', ['build-client', 'build-server', 'test']);
+gulp.task('build', ['build-client', 'move-client', 'build-server', 'test']);
 
 gulp.task('test', ['lint'], function () {
     gulp.src(['test/**/*.js'])
@@ -18,37 +20,76 @@ gulp.task('test', ['lint'], function () {
 });
 
 gulp.task('lint', function () {
-  return gulp.src(['**/*.js', '!node_modules/**/*.js', '!bin/**/*.js'])
+  return gulp.src(['src/**/*.js'])
     .pipe(jshint({
-          esnext: true
+        esnext: true,
+	jquery: true,
+	globals: {
+	    "require" : false
+	}
       }))
     .pipe(jshint.reporter('default', { verbose: true}))
     .pipe(jshint.reporter('fail'));
 });
 
-gulp.task('build-client', ['lint', 'move-client'], function () {
-  return gulp.src(['src/client/js/app.js'])
-    .pipe(uglify())
-    .pipe(webpack(require('./webpack.config.js')))
-    .pipe(babel({
-      presets: [
-        ['es2015', { 'modules': false }]
-      ]
-    }))
-    .pipe(gulp.dest('bin/client/js/'));
+gulp.task('build-client', ['lint'], function (cb) {
+    pump([gulp.src(['src/client/js/app.js']),
+	  babel({
+	      babelrc: false,
+	      compact: false,
+	      presets: [
+	  	  ['es2015']
+	      ],
+	  }),
+	  webpack({
+	      output: {
+	  	  filename: "app.js"
+	      }
+	  }),
+	  // obfuscator({
+	  //     compact: true,
+	  //     controlFlowFlattening: false,
+	  //     deadCodeInjection: false,
+	  //     debugProtection: false,
+	  //     debugProtectionInterval: false,
+	  //     disableConsoleOutput: true,
+	  //     identifierNamesGenerator: 'hexadecimal',
+	  //     log: false,
+	  //     renameGlobals: false,
+	  //     rotateStringArray: true,
+	  //     selfDefending: true,
+	  //     stringArray: true,
+	  //     stringArrayEncoding: true,
+	  //     stringArrayThreshold: 0.75,
+	  //     unicodeEscapeSequence: false,
+	  // }),
+	  debug({title:'build-client'}),
+	  gulp.dest('bin/client/js/'),
+	  ],cb);
 });
 
-gulp.task('move-client', function () {
-  return gulp.src(['src/client/**/*.*', '!client/js/*.js'])
-    .pipe(gulp.dest('./bin/client/'));
+gulp.task('build-server', ['lint'], function (cb) {
+    pump([
+	gulp.src(['src/server/**/*.js']),
+	// babel({
+	//     babelrc: false,
+	//     compact: false,
+	//     presets: [
+	// 	['es2015']
+	//     ],
+	// }),
+	debug({title:'build-server'}),
+	gulp.dest('bin/server/'),
+    ],cb);
 });
 
-
-gulp.task('build-server', ['lint'], function () {
-  return gulp.src(['src/server/**/*.*', 'src/server/**/*.js'])
-    .pipe(babel())
-    .pipe(gulp.dest('bin/server/'));
+gulp.task('move-client', function (cb) {
+    pump([gulp.src(['src/client/**/*.!(js)']),
+	  debug({title:'move-client'}),
+	  gulp.dest('./bin/client/')
+	 ],cb);
 });
+
 
 gulp.task('watch', ['build'], function () {
   gulp.watch(['src/client/**/*.*'], ['build-client', 'move-client']);

@@ -1,4 +1,11 @@
-var io = require('socket.io-client');
+// jshint bitwise: true
+// jshint browser: true
+// jshint devel: true
+
+'use strict';                                    // jshint ignore:line
+var io = require('socket.io-client');            // jshint ignore:line
+var canvas = require('./canvas.js');            // jshint ignore:line
+
 var socket;
 
 var logger = function(...args) {
@@ -111,8 +118,17 @@ function init() {
     // The current player's view into the board
 
     viewport = document.createElement( 'canvas' );
+    viewport.id = "viewport";
     viewport.width = view.width * global.cellsize;
     viewport.height = view.height * global.cellsize;
+//    viewport.addEventListener('mousemove', viewport_mousemove, false);
+//    viewport.addEventListener('mouseout', viewport_mouseout, false);
+//    viewport.addEventListener('keydown', viewport_keydown, false);
+//    viewport.addEventListener('keypress', viewport_keypress, false);
+//    viewport.addEventListener('keyup', viewport_keyup, false);
+//    viewport.addEventListener('touchstart', viewport_touchstart, false);
+//    viewport.addEventListener('touchmove', viewport_touchmove, false);
+
     viewport_ctx = viewport.getContext( '2d' );
     viewport_ctx.strokeRect(0,0,viewport_ctx.canvas.width,viewport_ctx.canvas.height);
     viewport_ctx.imageSmoothingEnabled = false;
@@ -134,17 +150,29 @@ function init() {
 
     if (global.grid) {
 	board_ctx.beginPath();
-	for (x = 0; x <= dimension.width; x++) {
+	for (var x = 0; x <= dimension.width; x++) {
 	    board_ctx.moveTo(x*global.cellsize,0);
 	    board_ctx.lineTo(x*global.cellsize,dimension.height*global.cellsize);
 	}
-	for (y = 0; y <= dimension.height; y++) {
+	for (var y = 0; y <= dimension.height; y++) {
 	    board_ctx.moveTo(0,y*global.cellsize);
 	    board_ctx.lineTo(dimension.width*global.cellsize,y*global.cellsize);
 	}
 	board_ctx.closePath();
 	board_ctx.stroke();
     }
+
+    $(window).keypress(log_event);
+    $(window).keydown(log_event);
+    // $(window).keyup(log_event);
+    // $(window).mouseout(log_event);
+    // $(window).mousein(log_event);
+    // $(window).mousemove(log_event);
+}
+
+function log_event(event) {
+    logger(event, event.keyCode, event.which);
+}
 
 function setupSocket(socket) {
     socket.on('pongcheck', function () {
@@ -185,7 +213,7 @@ function setupSocket(socket) {
     });
 
     socket.on('leaderboard', function (data) {
-        leaderboard = data.leaderboard;
+//        leaderboard = data.leaderboard;
     });
 
     socket.on('serverMSG', function (data) {
@@ -212,12 +240,9 @@ function setupSocket(socket) {
 
     socket.on('player_kicked', function (data) {
         global.gameStart = false;
-        reason = data;
         global.kicked = true;
         socket.close();
     });
-}
-
 }
 
 // Player Constructor
@@ -246,7 +271,7 @@ function Player() {
 }
 
 function draw_axes(ctx) {
-    for (x = -1000; x <= 1000; x+=10) {
+    for (var x = -1000; x <= 1000; x+=10) {
 	ctx.beginPath();
 	ctx.moveTo(x,-1000);
 	if (x < 0) {
@@ -262,7 +287,7 @@ function draw_axes(ctx) {
 	ctx.closePath();
 	ctx.stroke();
     }
-    for (y = -1000; y <= 1000; y+=10) {
+    for (var y = -1000; y <= 1000; y+=10) {
 	ctx.beginPath();
 	ctx.moveTo(-1000,y);
 	if (y < 0) {
@@ -284,7 +309,7 @@ var delaycount = 0;
 
 function animate() {
 //    window.setTimeout(animate, 100);
-    requestAnimFrame( animate );
+    window.requestAnimFrame( animate );
 
     clear_board();
 
