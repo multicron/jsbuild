@@ -81,6 +81,7 @@ function add_player() {
 // Player Constructor
 
 function Player() {
+    this.id = undefined;
     this.alive = 1;
     this.dir = direction.up;
     this.dash = (Math.random() > 0.5);
@@ -353,13 +354,12 @@ io.on('connect', function (socket) {
 
     // Initialize new player
 
+    var currentPlayer; // Just for legacy code
 
-//    var currentPlayer = new Player();
-//    currentPlayer.id = socket.id;
-//    players.push(currentPlayer);
-//    sockets[currentPlayer.id] = socket;
-
-    var currentPlayer;
+    var connected_player = new Player();
+    connected_player.id = socket.id;
+    sockets[connected_player.id] = socket;
+    players.push(connected_player);
 
     immortal_socket = socket;
 
@@ -393,13 +393,22 @@ io.on('connect', function (socket) {
 
     });
 
+    socket.on('c_change_direction', function (player_from_client) {
+        logger('Player ' + connected_player.id + ' changing direction');
+	logger(connected_player);
+	if (connected_player.id != player_from_client.id) {
+	    logger("Player IDs don't match!", connected_player.id, player_from_client.id);
+	}
+	else {
+	    connected_player.dir = player_from_client.dir;
+	}
+    });
+
     socket.on('pingcheck', function () {
         socket.emit('pongcheck');
     });
 
     socket.on('windowResized', function (data) {
-        currentPlayer.screenWidth = data.screenWidth;
-        currentPlayer.screenHeight = data.screenHeight;
     });
 
     socket.on('respawn', function () {
@@ -407,8 +416,6 @@ io.on('connect', function (socket) {
 
     socket.on('disconnect', function () {
 	logger("Got disconnect");
-        if (util.findIndex(users, currentPlayer.id) > -1)
-            users.splice(util.findIndex(users, currentPlayer.id), 1);
         logger('[INFO] User ' + currentPlayer.name + ' disconnected!');
 
         socket.broadcast.emit('playerDisconnect', { name: currentPlayer.name });

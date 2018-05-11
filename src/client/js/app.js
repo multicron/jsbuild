@@ -78,13 +78,31 @@ var direction_delta = {stopped: { x: 0,  y: 0  },
 init();
 animate();
 
+function player_by_id(id) {
+    logger("Player by id",id);
+    var valid_players =  players.filter(function (p) {
+	return p.id==id;
+	});
+    if (valid_players.length == 1) {
+	logger("Found player id in players[] array!",id);
+	return valid_players[0];
+    }
+    else if (valid_players.length > 1) {
+	logger("Multiple matches to id in players[] array!");
+	return valid_players[0];
+    }
+    else {
+	return undefined;
+    }
+}
+
 function init() {
 
 
     if (!socket) {
         socket = io({query:"type=player"});
         setupSocket(socket);
-	socket.emit("c_setup");
+	socket.emit("c_get_player_id");
     }
 
     // Canvases
@@ -121,13 +139,6 @@ function init() {
     viewport.id = "viewport";
     viewport.width = view.width * global.cellsize;
     viewport.height = view.height * global.cellsize;
-//    viewport.addEventListener('mousemove', viewport_mousemove, false);
-//    viewport.addEventListener('mouseout', viewport_mouseout, false);
-//    viewport.addEventListener('keydown', viewport_keydown, false);
-//    viewport.addEventListener('keypress', viewport_keypress, false);
-//    viewport.addEventListener('keyup', viewport_keyup, false);
-//    viewport.addEventListener('touchstart', viewport_touchstart, false);
-//    viewport.addEventListener('touchmove', viewport_touchmove, false);
 
     viewport_ctx = viewport.getContext( '2d' );
     viewport_ctx.strokeRect(0,0,viewport_ctx.canvas.width,viewport_ctx.canvas.height);
@@ -164,14 +175,64 @@ function init() {
 
     $(window).keypress(log_event);
     $(window).keydown(log_event);
-    // $(window).keyup(log_event);
-    // $(window).mouseout(log_event);
-    // $(window).mousein(log_event);
-    // $(window).mousemove(log_event);
+    $(window).keyup(log_event);
+    $(window).mouseout(log_event);
+    $(window).mousemove(mouse_move);
+}
+
+function mouse_move(event) {
+    logger("Mouse Move");
+    logger("Mouse", event.pageX,event.pageY);
+    var pt = get_mouse_pos(viewport, event);
+    logger("MousePos", pt);
+    var dir = mouse_pos_to_dir(pt);
+    viewport_player.dir = dir;
+    socket.emit('c_change_direction',viewport_player);
 }
 
 function log_event(event) {
-    logger(event, event.keyCode, event.which);
+//    logger(event);
+//    logger("Key", event.keyCode, event.which);
+//    logger("Mouse", event.pageX,event.pageY);
+    var pt = get_mouse_pos(viewport, event);
+//    logger("MousePos", pt);
+    logger("Dir",mouse_pos_to_dir(pt));
+}
+
+function get_mouse_pos(canvas, event) {
+    var rect = canvas.getBoundingClientRect();
+    return {
+        x: (event.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
+        y: (event.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
+    };
+}
+
+function mouse_pos_to_dir(passed_point) {
+    var pt = {x: passed_point.x,
+	      y: passed_point.y
+	     };
+    
+    var center = {
+	x: viewport.width / 2,
+	y: viewport.height / 2
+    };
+
+    var tolerance = {
+	x: 5,
+	y: 5
+    };
+
+    pt.x -= center.x;
+    pt.y -= center.y;
+
+    logger("Centered", pt.x, pt.y);
+
+    if (pt.x + tolerance.x < 0 && pt.x < pt.y) return direction.left;
+    if (pt.x - tolerance.x > 0 && pt.x > pt.y) return direction.right;
+    if (pt.y + tolerance.y < 0 && pt.x >= pt.y) return direction.up;
+    if (pt.y - tolerance.y > 0 && pt.x <= pt.y) return direction.down;
+
+    return pt;
 }
 
 function setupSocket(socket) {
@@ -248,6 +309,7 @@ function setupSocket(socket) {
 // Player Constructor
 
 function Player() {
+    this.id = undefined;
     this.alive = 1;
     this.dir = direction.up;
     this.speed = 1.0;
@@ -317,7 +379,9 @@ function animate() {
 	refresh_player(players[i]);
     }
 
-    viewport_player = players[0];
+    viewport_player = player_by_id(socket.id);
+
+    logger("Viewport player id",viewport_player.id);
 
     update_viewport(viewport_player);
 
