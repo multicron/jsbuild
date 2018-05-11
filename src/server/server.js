@@ -75,6 +75,7 @@ var robot_counter = 0;
 function add_player() {
     var player = new Player();
     player.id = "R"+robot_counter++;
+    player.is_robot = true;
     players.push(player);
 }
 
@@ -82,9 +83,10 @@ function add_player() {
 
 function Player() {
     this.id = undefined;
+    this.is_robot = false;
     this.alive = 1;
     this.dir = direction.up;
-    this.dash = (Math.random() > 0.5);
+    this.dash = false;  // (Math.random() > 0.5);
     this.size = 25;
     this.position = {
 	x: Math.floor(Math.random() * (dimension.width-50)) + 25,
@@ -206,49 +208,45 @@ function tick_game() {
 	populate_all_cells(players[i]);
     }
 
-    var killer;
+    // for (i in players) {
+    // 	if (players[i].alive && players[i].dash) {
+    // 	    one_step(players[i]);
+    // 	}
+    // }
+
+    // remove_dead_players();
 
     for (i in players) {
 	if (players[i].alive) {
-	    move_player(players[i]);
-	    killer = check_collision(players[i]);
-	    if (killer) {
-		award_collision(players[i],killer);
-		players[i].alive = 0;
-	    }
-	shift_player(players[i]);
+	    one_step(players[i]);
 	}
     }
 
     remove_dead_players();
 
-    for (i in players) {
-	if (players[i].alive && players[i].dash) {
-	    move_player(players[i]);
-	    killer = check_collision(players[i]);
-	    if (killer) {
-		award_collision(players[i],killer);
-		players[i].alive = 0;
-	    }
-	shift_player(players[i]);
-	}
-    }
-
-    remove_dead_players();
-
-    for (i in players) {
-	var player_id = players[i].id;
-	var player_socket = sockets[player_id];
-	if (player_socket) {
-	    player_socket.emit('s_update_players',players);
-	}
-    }
-
-    if (immortal_socket) {
-	immortal_socket.emit('s_update_players',players);
-	logger("Sent update");
-    }
+    // for (i in players) {
+    // 	var player_id = players[i].id;
+    // 	var player_socket = sockets[player_id];
+    // 	if (player_socket) {
+    // 	    player_socket.emit('s_update_players',players);
+    // 	    logger("Sent s_update_players to ",players[i].id);
+    // 	}
+    // }
 }
+
+function one_step(p) {
+    if (p.is_robot) {
+	turn_robot(p);
+	}
+    move_player(p);
+    var killer = check_collision(p);
+    if (killer) {
+	award_collision(p,killer);
+	p.alive = 0;
+    }
+    shift_player(p);
+}
+
 
 function check_collision(p) {
     var c = all_cells[p.position.x][p.position.y];
@@ -276,7 +274,7 @@ function shift_player(p) {
     }
 }
 
-function move_player(p) {
+function turn_robot(p) {
 
     var delta = {
 	x: 0,
@@ -291,7 +289,15 @@ function move_player(p) {
     else if (rnd < 0.10) {
 	p.dir = turn_right(p.dir);
     }
-	
+}
+
+function move_player(p) {
+
+    var delta = {
+	x: 0,
+	y: 0,
+    };
+    
     switch (p.dir) {
     case direction.right: 
 	delta.x = 1;
@@ -320,22 +326,22 @@ function move_player(p) {
 
     if (p.position.x < 0) {
 	p.position.x = 0;
-	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
+//	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
     }
 
     if (p.position.y < 0) {
 	p.position.y = 0;
-	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
+//	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
     }
 
     if (p.position.x >= dimension.width) {
 	p.position.x = dimension.width - 1;
-	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
+//	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
     }
 
     if (p.position.y >= dimension.height) {
 	p.position.y = dimension.height - 1;
-	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
+//	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
     }
 }
 
@@ -358,8 +364,10 @@ io.on('connect', function (socket) {
 
     var connected_player = new Player();
     connected_player.id = socket.id;
+    connected_player.is_robot = false;
     sockets[connected_player.id] = socket;
     players.push(connected_player);
+    logger('Player ' + connected_player.id + ' connecting!');
 
     immortal_socket = socket;
 
@@ -368,7 +376,7 @@ io.on('connect', function (socket) {
         onevent = socket.onevent;
 	
 	socket.emit = function () {
-	    logger('socket.io', 'emit', arguments[0]);
+//	    logger('socket.io', 'emit', arguments[0]);
             emit.apply(socket, arguments);
 	};
 	socket.onevent = function (packet) {
@@ -377,31 +385,26 @@ io.on('connect', function (socket) {
 	};
     }());
 
-    socket.on('gotit', function (player) {
-        logger('[INFO] Player ' + player.name + ' connecting!');
-
-        if (util.findIndex(users, player.id) > -1) {
-            logger('[INFO] Player ID is already connected, kicking.');
-            socket.disconnect();
-        } else if (!util.validNick(player.name)) {
-            socket.emit('kick', 'Invalid username.');
-            socket.disconnect();
-        } else {
-            logger('[INFO] Player ' + player.name + ' connected!');
-            sockets[player.id] = socket;
-        }
-
+    socket.on('c_change_direction', function (new_dir) {
+        logger('c_change_direction ' + connected_player.id + ' changing direction to ',new_dir);
+	var old_dir = connected_player.dir;
+	if (old_dir == new_dir) {
+	    // Do nothing
+	}
+	else if ((old_dir!=direction.left && old_dir!=direction.right) && (new_dir==direction.left || new_dir==direction.right)) {
+            logger('Changing direction to vertical',new_dir);
+	    connected_player.dir = new_dir;
+	}
+	else if ((old_dir!=direction.up && old_dir!=direction.down) && (new_dir==direction.up || new_dir==direction.down)) {
+            logger('Changing direction to horizontal',new_dir);
+	    connected_player.dir = new_dir;
+	}
     });
 
-    socket.on('c_change_direction', function (player_from_client) {
-        logger('Player ' + connected_player.id + ' changing direction');
-	logger(connected_player);
-	if (connected_player.id != player_from_client.id) {
-	    logger("Player IDs don't match!", connected_player.id, player_from_client.id);
-	}
-	else {
-	    connected_player.dir = player_from_client.dir;
-	}
+    socket.on('c_request_player_update', function () {
+        logger('c_request_player_update from ' + connected_player.id);
+	socket.emit('s_update_players',players);
+	logger("Sent s_update_players to ",connected_player.id);
     });
 
     socket.on('pingcheck', function () {
@@ -416,9 +419,8 @@ io.on('connect', function (socket) {
 
     socket.on('disconnect', function () {
 	logger("Got disconnect");
-        logger('[INFO] User ' + currentPlayer.name + ' disconnected!');
-
-        socket.broadcast.emit('playerDisconnect', { name: currentPlayer.name });
+        logger('[INFO] User ' + connected_player.id + ' disconnected!');
+       socket.broadcast.emit('s_player_disc', connected_player);
     });
 
     socket.on('kick', function(data) {
@@ -442,8 +444,8 @@ function log_status() {
 
 init_game();
 
-setInterval(tick_game, 100);
-setInterval(log_status,5000);
+setInterval(tick_game, 50);
+//setInterval(log_status,5000);
 //setInterval(sendUpdates, 1000 / conf.networkUpdateFactor);
 
 

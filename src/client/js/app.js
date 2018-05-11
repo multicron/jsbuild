@@ -36,6 +36,13 @@ var global = {
     rotateview: false,
 };
 
+const KEYCODES = {
+    LEFT: 37,
+    UP: 38,
+    RIGHT: 39,
+    DOWN: 40,
+};
+
 var dimension = {
     width: 500,
     height: 350,
@@ -79,12 +86,12 @@ init();
 animate();
 
 function player_by_id(id) {
-    logger("Player by id",id);
+//    logger("Player by id",id);
     var valid_players =  players.filter(function (p) {
 	return p.id==id;
 	});
     if (valid_players.length == 1) {
-	logger("Found player id in players[] array!",id);
+//	logger("Found player id in players[] array!",id);
 	return valid_players[0];
     }
     else if (valid_players.length > 1) {
@@ -174,10 +181,10 @@ function init() {
     }
 
     $(window).keypress(log_event);
-    $(window).keydown(log_event);
+    $(window).keydown(key_down);
     $(window).keyup(log_event);
     $(window).mouseout(log_event);
-    $(window).mousemove(mouse_move);
+    $(window).mousemove(log_event);
 }
 
 function mouse_move(event) {
@@ -185,18 +192,42 @@ function mouse_move(event) {
     logger("Mouse", event.pageX,event.pageY);
     var pt = get_mouse_pos(viewport, event);
     logger("MousePos", pt);
-    var dir = mouse_pos_to_dir(pt);
-    viewport_player.dir = dir;
-    socket.emit('c_change_direction',viewport_player);
+    var new_dir = mouse_pos_to_dir(pt);
+    var old_dir = viewport_player.dir;
+}
+
+function keycode_to_dir(keycode) {
+    switch (keycode) {
+    case KEYCODES.LEFT:
+	return direction.left;
+    case KEYCODES.RIGHT:
+	return direction.right;
+    case KEYCODES.UP:
+	return direction.up;
+    case KEYCODES.DOWN:
+	return direction.down;
+    default:
+	return undefined;
+    }
+}
+
+
+function key_down(event) {
+
+    logger("Keydown");
+    logger("Key", event.which);
+    var new_dir = keycode_to_dir(event.which);
+    logger("Direction", new_dir);
+
+    if (new_dir) {
+	event.preventDefault();
+	logger("Sending direction change to",new_dir);
+	socket.emit('c_change_direction',new_dir);
+    }
 }
 
 function log_event(event) {
-//    logger(event);
-//    logger("Key", event.keyCode, event.which);
-//    logger("Mouse", event.pageX,event.pageY);
-    var pt = get_mouse_pos(viewport, event);
-//    logger("MousePos", pt);
-    logger("Dir",mouse_pos_to_dir(pt));
+    logger(event);
 }
 
 function get_mouse_pos(canvas, event) {
@@ -369,9 +400,15 @@ function draw_axes(ctx) {
 
 var delaycount = 0;
 
+function request_player_update() {
+    socket.emit('c_request_player_update');
+}
+
 function animate() {
-//    window.setTimeout(animate, 100);
-    window.requestAnimFrame( animate );
+    window.setTimeout(animate, 100);
+//    window.requestAnimFrame( animate );
+
+    request_player_update();
 
     clear_board();
 
@@ -381,7 +418,7 @@ function animate() {
 
     viewport_player = player_by_id(socket.id);
 
-    logger("Viewport player id",viewport_player.id);
+//    logger("Viewport player id",viewport_player.id);
 
     update_viewport(viewport_player);
 
