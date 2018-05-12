@@ -152,19 +152,6 @@ function remove_dead_players() {
     }
 }
 
-function shift_player(p) {
-
-    p.size += 0.01;
-    
-    p.cells.push({x: p.position.x,
-		  y: p.position.y
-		 });
-
-    if (p.cells.length >= p.size) {
-	var tail_position = p.cells.shift();
-    }
-}
-
 function turn_right(dir) {
     switch (dir) {
     case direction.up: 
@@ -224,14 +211,14 @@ function tick_game() {
 
     remove_dead_players();
 
-    // for (i in players) {
-    // 	var player_id = players[i].id;
-    // 	var player_socket = sockets[player_id];
-    // 	if (player_socket) {
-    // 	    player_socket.emit('s_update_players',players);
-    // 	    logger("Sent s_update_players to ",players[i].id);
-    // 	}
-    // }
+    for (i in players) {
+    	var player_id = players[i].id;
+    	var player_socket = sockets[player_id];
+    	if (player_socket) {
+    	    player_socket.volatile.emit('s_update_players',players);
+    	    logger("Sent s_update_players to ",players[i].id);
+    	}
+    }
 }
 
 function one_step(p) {
@@ -326,22 +313,22 @@ function move_player(p) {
 
     if (p.position.x < 0) {
 	p.position.x = 0;
-//	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
+	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
     }
 
     if (p.position.y < 0) {
 	p.position.y = 0;
-//	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
+	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
     }
 
     if (p.position.x >= dimension.width) {
 	p.position.x = dimension.width - 1;
-//	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
+	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
     }
 
     if (p.position.y >= dimension.height) {
 	p.position.y = dimension.height - 1;
-//	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
+	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
     }
 }
 
@@ -371,19 +358,19 @@ io.on('connect', function (socket) {
 
     immortal_socket = socket;
 
-    (function () {
-	var emit = socket.emit,
-        onevent = socket.onevent;
+    // (function () {
+    // 	var emit = socket.emit,
+    //     onevent = socket.onevent;
 	
-	socket.emit = function () {
-//	    logger('socket.io', 'emit', arguments[0]);
-            emit.apply(socket, arguments);
-	};
-	socket.onevent = function (packet) {
-            logger('socket.io', 'on', Array.prototype.slice.call(packet.data || []));
-            onevent.apply(socket, arguments);
-	};
-    }());
+    // 	socket.emit = function () {
+    // 	    logger('socket.io', 'emit', arguments[0]);
+    //         emit.apply(socket, arguments);
+    // 	};
+    // 	socket.onevent = function (packet) {
+    //         logger('socket.io', 'on', Array.prototype.slice.call(packet.data || []));
+    //         onevent.apply(socket, arguments);
+    // 	};
+    // }());
 
     socket.on('c_change_direction', function (new_dir) {
         logger('c_change_direction ' + connected_player.id + ' changing direction to ',new_dir);
@@ -444,7 +431,7 @@ function log_status() {
 
 init_game();
 
-setInterval(tick_game, 50);
+setInterval(tick_game,100);
 //setInterval(log_status,5000);
 //setInterval(sendUpdates, 1000 / conf.networkUpdateFactor);
 

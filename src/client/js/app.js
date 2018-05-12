@@ -4,7 +4,6 @@
 
 'use strict';                                    // jshint ignore:line
 var io = require('socket.io-client');            // jshint ignore:line
-var canvas = require('./canvas.js');            // jshint ignore:line
 
 var socket;
 
@@ -13,6 +12,8 @@ var logger = function(...args) {
         console.log(...args);
     }
 };
+
+logger = function() {};
 
 // requestAnim shim layer by Paul Irish
     window.requestAnimFrame = (function(){
@@ -124,7 +125,7 @@ function init() {
     draw_axes(test_ctx);
 */    
 
-    // A view of the entire board, same size as the viewport
+    // A map of the entire board, same size as the viewport
 
     map = document.createElement( 'canvas' );
     map.width = view.width * global.cellsize;
@@ -185,6 +186,8 @@ function init() {
     $(window).keyup(log_event);
     $(window).mouseout(log_event);
     $(window).mousemove(log_event);
+
+//    window.setInterval(request_player_update, 50);
 }
 
 function mouse_move(event) {
@@ -312,7 +315,7 @@ function setupSocket(socket) {
     });
 
     socket.on('s_update_players', function (data) {
-//	logger("Got s_update_players",data);
+//	logger("Got s_update_players");
 	players = data;
     });
 
@@ -405,10 +408,8 @@ function request_player_update() {
 }
 
 function animate() {
-    window.setTimeout(animate, 100);
-//    window.requestAnimFrame( animate );
+    window.requestAnimFrame( animate );
 
-    request_player_update();
 
     clear_board();
 
@@ -420,9 +421,11 @@ function animate() {
 
 //    logger("Viewport player id",viewport_player.id);
 
-    update_viewport(viewport_player);
+    if (viewport_player) {
+	update_viewport(viewport_player);
 
-    update_map(viewport_player);
+	update_map(viewport_player);
+    }
 
 }
 
