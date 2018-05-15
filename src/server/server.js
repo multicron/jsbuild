@@ -45,7 +45,7 @@ var global = {
     smallblocks: 0,
     cellsize: 10,
     delaycount: 0,
-    minplayers: 100,
+    minplayers: 1,
     rotateview: false,
 };
 
@@ -120,7 +120,7 @@ function init_game() {
 
     // Add initial players to the players[] array
 
-    for (var x=0;x<100;x++) {
+    for (var x=0;x<0;x++) {
 	add_player();
     }
 }
@@ -211,13 +211,15 @@ function tick_game() {
 
     remove_dead_players();
 
-    for (i in players) {
-    	var player_id = players[i].id;
-    	var player_socket = sockets[player_id];
-    	if (player_socket) {
-    	    player_socket.volatile.emit('s_update_players',players);
-    	    logger("Sent s_update_players to ",players[i].id);
-    	}
+    if (1) {
+	for (i in players) {
+    	    var player_id = players[i].id;
+    	    var player_socket = sockets[player_id];
+    	    if (player_socket) {
+    		player_socket.volatile.emit('s_update_players',players);
+    		logger("Sent s_update_players to ",players[i].id);
+    	    }
+	}
     }
 }
 
@@ -358,34 +360,47 @@ io.on('connect', function (socket) {
 
     immortal_socket = socket;
 
-    // (function () {
-    // 	var emit = socket.emit,
-    //     onevent = socket.onevent;
+    if (0) {
+	(function () {
+    	    var emit = socket.emit,
+            onevent = socket.onevent;
+	    
+    	    socket.emit = function () {
+    		logger('socket.io', 'emit', arguments[0]);
+		emit.apply(socket, arguments);
+    	    };
+    	    socket.onevent = function (packet) {
+		logger('socket.io', 'on', Array.prototype.slice.call(packet.data || []));
+		onevent.apply(socket, arguments);
+    	    };
+	}());
+    }
 	
-    // 	socket.emit = function () {
-    // 	    logger('socket.io', 'emit', arguments[0]);
-    //         emit.apply(socket, arguments);
-    // 	};
-    // 	socket.onevent = function (packet) {
-    //         logger('socket.io', 'on', Array.prototype.slice.call(packet.data || []));
-    //         onevent.apply(socket, arguments);
-    // 	};
-    // }());
+    socket.on('c_latency', function (startTime, cb) {
+	cb(startTime);
+    }); 
+
+    socket.on('c_timestamp', function (clientTime) {
+	logger("Client time lag = ",Date.now() - clientTime);
+    }); 
 
     socket.on('c_change_direction', function (new_dir) {
         logger('c_change_direction ' + connected_player.id + ' changing direction to ',new_dir);
-	var old_dir = connected_player.dir;
-	if (old_dir == new_dir) {
-	    // Do nothing
-	}
-	else if ((old_dir!=direction.left && old_dir!=direction.right) && (new_dir==direction.left || new_dir==direction.right)) {
-            logger('Changing direction to vertical',new_dir);
-	    connected_player.dir = new_dir;
-	}
-	else if ((old_dir!=direction.up && old_dir!=direction.down) && (new_dir==direction.up || new_dir==direction.down)) {
-            logger('Changing direction to horizontal',new_dir);
-	    connected_player.dir = new_dir;
-	}
+	connected_player.dir = new_dir;
+	logger(socket);
+
+	// var old_dir = connected_player.dir;
+	// if (old_dir == new_dir) {
+	//     // Do nothing
+	// }
+	// else if ((old_dir!=direction.left && old_dir!=direction.right) && (new_dir==direction.left || new_dir==direction.right)) {
+        //     logger('Changing direction to vertical',new_dir);
+	//     connected_player.dir = new_dir;
+	// }
+	// else if ((old_dir!=direction.up && old_dir!=direction.down) && (new_dir==direction.up || new_dir==direction.down)) {
+        //     logger('Changing direction to horizontal',new_dir);
+	//     connected_player.dir = new_dir;
+	// }
     });
 
     socket.on('c_request_player_update', function () {
