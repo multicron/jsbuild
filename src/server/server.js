@@ -45,7 +45,8 @@ var global = {
     smallblocks: 0,
     cellsize: 10,
     delaycount: 0,
-    minplayers: 1,
+    startplayers: 100,
+    minplayers: 100,
     rotateview: false,
 };
 
@@ -120,13 +121,13 @@ function init_game() {
 
     // Add initial players to the players[] array
 
-    for (var x=0;x<0;x++) {
+    for (var x=0;x<global.startplayers;x++) {
 	add_player();
     }
 }
 
 function update_viewport_scale(p) {
-    p.scale = 1 + Math.min(2,(p.cells.length / 1000));
+    p.scale = 1; // + Math.min(2,(p.cells.length / 1000));
 }
 
 function populate_all_cells(p) {
@@ -182,10 +183,6 @@ function turn_left(dir) {
 
 function tick_game() {
 
-    while (players.length < global.minplayers) {
-	add_player();
-    }
-
     clear_all_cells();
 
     var i;
@@ -221,6 +218,11 @@ function tick_game() {
     	    }
 	}
     }
+
+    while (players.length < global.minplayers) {
+	add_player();
+    }
+
 }
 
 function one_step(p) {

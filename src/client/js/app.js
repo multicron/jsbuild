@@ -13,7 +13,7 @@ var logger = function(...args) {
     }
 };
 
-logger = function() {};
+//logger = function() {};
 
 // requestAnim shim layer by Paul Irish
     window.requestAnimFrame = (function(){
@@ -108,7 +108,7 @@ function init() {
 
 
     if (!socket) {
-        socket = io({query:"type=player"});
+        socket = io({query:"type=player",transports:['websocket']});
         setupSocket(socket);
 	socket.emit("c_get_player_id");
     }
@@ -188,6 +188,8 @@ function init() {
     $(window).mousemove(log_event);
 
 //    window.setInterval(request_player_update, 50);
+
+    window.setInterval(request_timestamp,100);
 }
 
 function mouse_move(event) {
@@ -407,9 +409,20 @@ function request_player_update() {
     socket.emit('c_request_player_update');
 }
 
+function request_timestamp() {
+    socket.emit('c_timestamp', Date.now());
+}
+
 function animate() {
     window.requestAnimFrame( animate );
+    //    socket.emit('c_request_player_update');
 
+    if (0) {
+	socket.emit('c_latency', Date.now(), function(startTime) {
+	    var latency = Date.now() - startTime;
+	    logger("Latency to server is ",latency);
+	});
+    }
 
     clear_board();
 
@@ -424,12 +437,14 @@ function animate() {
     if (viewport_player) {
 	update_viewport(viewport_player);
 
-	update_map(viewport_player);
+//	update_map(viewport_player);
     }
 
 }
 
 function update_viewport(p) {
+    var update_viewport_start = Date.now();
+
     var width = dimension.width;
     var height = dimension.height;
 
@@ -489,6 +504,7 @@ function update_viewport(p) {
 	viewport_ctx.rotate(Math.PI);
 	viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
     }
+    logger("Viewport update took ",Date.now() - update_viewport_start, "ms");
 }
 
 function update_map(p) {
@@ -524,15 +540,85 @@ function refresh_player(p) {
 	s:p.shade_delta.s,
     };
 
-    for (var i in p.cells) {
-	if (i == (p.cells.length - 1)) {
-	    draw_cell(p.cells[i],{h:0,l:0,s:0});
+    var lines = cells_to_lines(p.cells);
+
+    if (0) {
+	for (var i=0; i < (p.cells.length - 1); i++) {
+	    draw_cell(p.cells[i],{h:0,l:50,s:50});	
+	    //	adjust_shade(shade,shade_delta,{h:0,l:50,s:50});
+	}
+    }
+
+    for (var j in lines) {
+	draw_line(lines[j],shade);
+    }
+    
+    
+   draw_cell(p.cells[p.cells.length - 1],{h:90,l:0,s:0});
+    
+}
+
+function cells_to_lines (cells) {
+
+    if (cells.length <= 0) return;
+
+    var start_x,start_y;
+    var end_x,end_y;
+    var start, end;
+    var lines = [];
+    var line;
+
+    function push_line(cell) {
+	lines.push({start:{x:start_x,y:start_y},end:{x:end_x,y:end_y}});
+
+	horiz = false;
+	vert = false;
+
+	if (cell) {
+	    start_x = end_x = cell.x;
+	    start_y = end_y = cell.y;
+	}
+    }
+
+    start_x = end_x = cells[0].x;
+    start_y = end_y = cells[0].y;
+
+    var horiz = false;
+    var vert = false;
+
+    for (var i = 1 ; i < cells.length; i++) {
+	let cell = cells[i];
+
+	if (cell.x != end_x && cell.y != end_y) {
+	    push_line(cell);
+	}
+
+	if (vert && cell.x != end_x) { // End of vertical line
+	    push_line(cell);
+	}
+	
+	if (horiz && cell.y != end_y) { // End of horizontal line
+	    push_line(cell);
+	}
+
+	if (cell.x == end_x) { // Building a vertical line
+	    end_x = cell.x;
+	    end_y = cell.y;
+	    vert = true;
+	}
+	else if (cell.y == end_y) { // Building a horizontal line
+	    end_x = cell.x;
+	    end_y = cell.y;
+	    horiz = true;
 	}
 	else {
-	    draw_cell(p.cells[i],shade);	
+	    logger("assertion failed");
 	}
-	adjust_shade(shade,shade_delta,p.shade);
     }
+
+    push_line();
+
+    return lines;
 }
 
 function draw_cell(cell,shade) {
@@ -552,6 +638,25 @@ function draw_cell(cell,shade) {
 			    global.cellsize,
 			    global.cellsize);
     }
+}
+
+function draw_line(line,shade) {
+    var color = 'hsl('+shade.h+','+shade.l+'%,'+shade.s+'%)';
+
+    board_ctx.fillStyle = color;
+
+//    logger("Line ",line.start.x,line.start.y,"to",line.end.x,line.end.y);
+
+    var line_left = Math.min(line.end.x,line.start.x);
+    var line_top  = Math.min(line.end.y,line.start.y);
+
+    var width = Math.abs((line.end.x - line.start.x))+1;
+    var height = Math.abs((line.end.y - line.start.y))+1;
+
+    board_ctx.fillRect(line_left*global.cellsize,
+		       line_top*global.cellsize,
+		       width * global.cellsize,
+		       height * global.cellsize);
 }
 
 function clear_board() {
