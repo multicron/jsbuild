@@ -45,8 +45,8 @@ var global = {
     smallblocks: 0,
     cellsize: 10,
     delaycount: 0,
-    startplayers: 100,
-    minplayers: 100,
+    startplayers: 50,
+    minplayers: 50,
     rotateview: false,
 };
 
@@ -127,7 +127,7 @@ function init_game() {
 }
 
 function update_viewport_scale(p) {
-    p.scale = 1; // + Math.min(2,(p.cells.length / 1000));
+    p.scale = 1 + Math.min(2,(p.cells.length / 1000));
 }
 
 function populate_all_cells(p) {

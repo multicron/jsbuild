@@ -130,15 +130,23 @@ function init() {
     map = document.createElement( 'canvas' );
     map.width = view.width * global.cellsize;
     map.height = view.height * global.cellsize;
-    map_ctx = map.getContext( '2d' );
+    map_ctx = map.getContext( '2d' , {alpha: false});
     map_ctx.imageSmoothingEnabled = false;
+
+    // A radar of the entire board, 1/16th the size of the viewport
+
+    radar = document.createElement( 'canvas' );
+    radar.width = (view.width / 4) * global.cellsize;
+    radar.height = (view.height / 4) * global.cellsize;
+    radar_ctx = radar.getContext( '2d' , {alpha: false});
+    radar_ctx.imageSmoothingEnabled = true;
 
     // The entire playing field
 
     board = document.createElement( 'canvas' );
     board.width = dimension.width * global.cellsize;
     board.height = dimension.height * global.cellsize;
-    board_ctx = board.getContext( '2d' );
+    board_ctx = board.getContext( '2d', {alpha: false});
     board_ctx.strokeRect(0,0,board_ctx.canvas.width,board_ctx.canvas.height);
 
     // The current player's view into the board
@@ -148,10 +156,12 @@ function init() {
     viewport.width = view.width * global.cellsize;
     viewport.height = view.height * global.cellsize;
 
-    viewport_ctx = viewport.getContext( '2d' );
+    viewport_ctx = viewport.getContext( '2d', {alpha: false});
     viewport_ctx.strokeRect(0,0,viewport_ctx.canvas.width,viewport_ctx.canvas.height);
     viewport_ctx.imageSmoothingEnabled = false;
 
+    document.body.appendChild( radar );
+    document.body.appendChild(document.createElement('br'));
     document.body.appendChild( viewport );
     document.body.appendChild(document.createElement('br'));
     document.body.appendChild( map );
@@ -437,7 +447,9 @@ function animate() {
     if (viewport_player) {
 	update_viewport(viewport_player);
 
-//	update_map(viewport_player);
+	update_map(viewport_player);
+
+	update_radar(viewport_player);
     }
 
 }
@@ -517,12 +529,31 @@ function update_map(p) {
 
     map_ctx.drawImage(board,
 		      0,0,
-		      board.width*global.cellsize,
-		      board.height*global.cellsize,
+		      board.width,
+		      board.height,
 		      0,0,
-		      map.width*global.cellsize,
-		      map.height*global.cellsize
+		      map.width,
+		      map.height
 		     );
+}
+
+function update_radar(p) {
+    var width = dimension.width/16;
+    var height = dimension.height/16;
+
+    radar_ctx.strokeStyle = 'rgb(255,255,255)';
+    radar_ctx.fillRect( 0, 0, radar_ctx.canvas.width, radar_ctx.canvas.height);
+    radar_ctx.strokeStyle = 'rgb(0,0,0)';
+    radar_ctx.strokeRect(0, 0, radar_ctx.canvas.width, radar_ctx.canvas.height);
+
+    radar_ctx.drawImage(board,
+			0,0,
+			board.width,
+			board.height,
+			0,0,
+			radar.width,
+			radar.height
+		       );
 }
 
 function refresh_player(p) {
@@ -660,7 +691,9 @@ function draw_line(line,shade) {
 }
 
 function clear_board() {
-    board_ctx.clearRect(0,0,board_ctx.canvas.width,
+    board_ctx.fillStyle = 'rgb(255,255,255)';
+
+    board_ctx.fillRect(0,0,board_ctx.canvas.width,
 			 board_ctx.canvas.height);
 }
 
