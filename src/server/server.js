@@ -45,8 +45,8 @@ var global = {
     smallblocks: 0,
     cellsize: 10,
     delaycount: 0,
-    startplayers: 50,
-    minplayers: 50,
+    startplayers: 100,
+    minplayers: 100,
     rotateview: false,
 };
 
@@ -192,14 +192,6 @@ function tick_game() {
 	populate_all_cells(players[i]);
     }
 
-    // for (i in players) {
-    // 	if (players[i].alive && players[i].dash) {
-    // 	    one_step(players[i]);
-    // 	}
-    // }
-
-    // remove_dead_players();
-
     for (i in players) {
 	if (players[i].alive) {
 	    one_step(players[i]);
@@ -233,6 +225,9 @@ function one_step(p) {
     var killer = check_collision(p);
     if (killer) {
 	award_collision(p,killer);
+	p.alive = 0;
+    }
+    if (check_edge_death(p)) {
 	p.alive = 0;
     }
     shift_player(p);
@@ -315,25 +310,35 @@ function move_player(p) {
     p.position.x += delta.x;
     p.position.y += delta.y;
 
-    if (p.position.x < 0) {
-	p.position.x = 0;
-	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
-    }
+    return;
 
-    if (p.position.y < 0) {
-	p.position.y = 0;
-	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
-    }
+    // if (p.position.x < 0) {
+    // 	p.position.x = 0;
+    // 	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
+    // }
 
-    if (p.position.x >= dimension.width) {
-	p.position.x = dimension.width - 1;
-	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
-    }
+    // if (p.position.y < 0) {
+    // 	p.position.y = 0;
+    // 	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
+    // }
 
-    if (p.position.y >= dimension.height) {
-	p.position.y = dimension.height - 1;
-	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
+    // if (p.position.x >= dimension.width) {
+    // 	p.position.x = dimension.width - 1;
+    // 	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
+    // }
+
+    // if (p.position.y >= dimension.height) {
+    // 	p.position.y = dimension.height - 1;
+    // 	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
+    // }
+}
+
+function check_edge_death(p) {
+
+    if (p.position.x < 0 || p.position.y < 0 || p.position.x > dimension.width || p.position.y > dimension.width) {
+	return true;
     }
+    return false;
 }
 
 function clear_all_cells() {

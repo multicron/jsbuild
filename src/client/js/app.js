@@ -136,10 +136,10 @@ function init() {
     // A radar of the entire board, 1/16th the size of the viewport
 
     radar = document.createElement( 'canvas' );
-    radar.width = (view.width / 4) * global.cellsize;
-    radar.height = (view.height / 4) * global.cellsize;
+    radar.width = (dimension.width / 16) * global.cellsize;
+    radar.height = (dimension.height / 16) * global.cellsize;
     radar_ctx = radar.getContext( '2d' , {alpha: false});
-    radar_ctx.imageSmoothingEnabled = true;
+    radar_ctx.imageSmoothingEnabled = false;
 
     // The entire playing field
 
