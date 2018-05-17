@@ -376,26 +376,26 @@ io.on('connect', function (socket) {
     }); 
 
     socket.on('c_timestamp', function (clientTime) {
-	logger("Client time lag = ",Date.now() - clientTime);
+//	logger("Client time lag = ",Date.now() - clientTime);
     }); 
 
     socket.on('c_change_direction', function (new_dir) {
         logger('c_change_direction ' + connected_player.id + ' changing direction to ',new_dir);
-	connected_player.dir = new_dir;
-	logger(socket);
+//	connected_player.dir = new_dir;
+//	logger(socket);
 
-	// var old_dir = connected_player.dir;
-	// if (old_dir == new_dir) {
-	//     // Do nothing
-	// }
-	// else if ((old_dir!=direction.left && old_dir!=direction.right) && (new_dir==direction.left || new_dir==direction.right)) {
-        //     logger('Changing direction to vertical',new_dir);
-	//     connected_player.dir = new_dir;
-	// }
-	// else if ((old_dir!=direction.up && old_dir!=direction.down) && (new_dir==direction.up || new_dir==direction.down)) {
-        //     logger('Changing direction to horizontal',new_dir);
-	//     connected_player.dir = new_dir;
-	// }
+	var old_dir = connected_player.dir;
+	if (old_dir == new_dir) {
+	    // Do nothing
+	}
+	else if ((old_dir!=direction.left && old_dir!=direction.right) && (new_dir==direction.left || new_dir==direction.right)) {
+            logger('Changing direction to vertical',new_dir);
+	    connected_player.dir = new_dir;
+	}
+	else if ((old_dir!=direction.up && old_dir!=direction.down) && (new_dir==direction.up || new_dir==direction.down)) {
+            logger('Changing direction to horizontal',new_dir);
+	    connected_player.dir = new_dir;
+	}
     });
 
     socket.on('c_request_player_update', function () {
