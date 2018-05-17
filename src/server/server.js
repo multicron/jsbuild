@@ -65,7 +65,7 @@ function populate_all_cells(p) {
 }
 
 function award_collision(killed,killer) {
-    killer.size += killed.cells.length;
+    killer.size += Math.floor(killed.cells.length/2);
     killed.size = 1;
 }
 
@@ -141,8 +141,8 @@ function tick_game() {
 
 }
 
-function send_client_updates {
-    for (i in players) {
+function send_client_updates() {
+    for (let i in players) {
     	var player_id = players[i].id;
     	var player_socket = sockets[player_id];
     	if (player_socket) {
@@ -171,9 +171,22 @@ function one_step(p) {
 }
 
 
-function check_collision(p) {
-    var c = all_cells[p.position.x][p.position.y];
+function get_collision_object(x,y) {
+    if (x <=0 || 
+	y <=0 || 
+	x >= global.world_dim.width ||
+	y >= global.world_dim.height) {
+	return false;
+    }
+    return all_cells[x][y];
+}
 
+function check_collision(p) {
+    var c = get_collision_object(p.position.x,p.position.y);
+
+    if (c===false) {
+	return false;
+    }
     if (c === p) {
 	return false;
     }
@@ -186,8 +199,6 @@ function check_collision(p) {
 
 function shift_player(p) {
 
-    p.size += 0.01;
-    
     p.cells.push({x: p.position.x,
 		  y: p.position.y
 		 });
@@ -198,15 +209,21 @@ function shift_player(p) {
 }
 
 function turn_robot(p) {
-
-    var delta = {
-	x: 0,
-	y: 0,
-    };
-    
     var rnd = Math.random();
 
-    if (rnd < 0.05) {
+    let new_pos = predict_player_position(p,2);
+
+    let c = get_collision_object(new_pos.x,new_pos.y);
+
+    let force_turn = (c===false || (c && c!==p));
+
+    if (force_turn && rnd < 0.5) {
+	p.dir = turn_left(p.dir);
+    }
+    else if (force_turn && rnd >= 0.5) {
+	p.dir = turn_right(p.dir);
+    }
+    else if (rnd < 0.05) {
 	p.dir = turn_left(p.dir);
     }
     else if (rnd < 0.10) {
@@ -214,7 +231,7 @@ function turn_robot(p) {
     }
 }
 
-function move_player(p) {
+function predict_player_position(p,steps) {
 
     var delta = {
 	x: 0,
@@ -244,9 +261,19 @@ function move_player(p) {
 	break;
     }
     
-    p.position.x += delta.x;
-    p.position.y += delta.y;
+    let new_pos = {x: p.position.x + delta.x * steps,
+		   y: p.position.y + delta.y * steps,
+		  };
 
+    return new_pos;
+}
+
+function move_player(p) {
+
+    let new_pos = predict_player_position(p,1);
+
+    p.position.x = new_pos.x;
+    p.position.y = new_pos.y;
 }
 
 function check_edge_death(p) {
@@ -308,8 +335,6 @@ io.on('connect', function (socket) {
 
     socket.on('c_change_direction', function (new_dir) {
         logger('c_change_direction ' + connected_player.id + ' changing direction to ',new_dir);
-//	connected_player.dir = new_dir;
-//	logger(socket);
 
 	var old_dir = connected_player.dir;
 	if (old_dir == new_dir) {
@@ -328,7 +353,7 @@ io.on('connect', function (socket) {
     socket.on('c_request_player_update', function () {
         logger('c_request_player_update from ' + connected_player.id);
 	socket.emit('s_update_players',players);
-	logger("Sent s_update_players to ",connected_player.id);
+	logger("Sent requested s_update_players to ",connected_player.id);
     });
 
     socket.on('pingcheck', function () {
