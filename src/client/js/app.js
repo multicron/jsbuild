@@ -30,22 +30,6 @@ var logger = function(...args) {
               };
     })();
   
-
-var dimension = {
-    width: 500,
-    height: 350,
-};
-
-var view = {
-    width: 100,
-    height: 70,
-};
-
-var map_dim = {
-    width: global.dimension.width / 10,
-    height: global.dimension.width / 10,
-};
-
 var board;
 var board_ctx;
 var viewport;
@@ -60,13 +44,6 @@ var players = [];
 var all_cells = [];
 
 var viewport_player;
-
-var direction_delta = {stopped: { x: 0,  y: 0  },
-		       up:      { x: 0,  y: -1 },
-		       down:    { x: 0,  y: 1  },
-		       left:    { x: -1, y: 0  },
-		       right:   { x: 1,  y: 0  },
-		      };
 
 init();
 animate();
@@ -102,8 +79,8 @@ function init() {
 
 /*
     test = document.createElement( 'canvas' );
-    test.width = global.dimension.width * global.cellsize;
-    test.height = global.dimension.height * global.cellsize;
+    test.width = global.world_dim.width * global.cellsize;
+    test.height = global.world_dim.height * global.cellsize;
     test_ctx = test.getContext( '2d' );
     test_ctx.translate(test.width,test.height);
     test_ctx.rotate(Math.PI/5);
@@ -113,24 +90,24 @@ function init() {
     // A map of the entire board, same size as the viewport
 
     map = document.createElement( 'canvas' );
-    map.width = view.width * global.cellsize;
-    map.height = view.height * global.cellsize;
+    map.width = global.view_dim.width * global.cellsize;
+    map.height = global.view_dim.height * global.cellsize;
     map_ctx = map.getContext( '2d' , {alpha: false});
     map_ctx.imageSmoothingEnabled = false;
 
     // A radar of the entire board, 1/16th the size of the viewport
 
     radar = document.createElement( 'canvas' );
-    radar.width = (view.width / 4) * global.cellsize;
-    radar.height = (view.height / 4) * global.cellsize;
+    radar.width = (global.view_dim.width / 4) * global.cellsize;
+    radar.height = (global.view_dim.height / 4) * global.cellsize;
     radar_ctx = radar.getContext( '2d' , {alpha: false});
     radar_ctx.imageSmoothingEnabled = true;
 
     // The entire playing field
 
     board = document.createElement( 'canvas' );
-    board.width = global.dimension.width * global.cellsize;
-    board.height = global.dimension.height * global.cellsize;
+    board.width = global.world_dim.width * global.cellsize;
+    board.height = global.world_dim.height * global.cellsize;
     board_ctx = board.getContext( '2d', {alpha: false});
     board_ctx.strokeRect(0,0,board_ctx.canvas.width,board_ctx.canvas.height);
 
@@ -138,8 +115,8 @@ function init() {
 
     viewport = document.createElement( 'canvas' );
     viewport.id = "viewport";
-    viewport.width = view.width * global.cellsize;
-    viewport.height = view.height * global.cellsize;
+    viewport.width = global.view_dim.width * global.cellsize;
+    viewport.height = global.view_dim.height * global.cellsize;
 
     viewport_ctx = viewport.getContext( '2d', {alpha: false});
     viewport_ctx.strokeRect(0,0,viewport_ctx.canvas.width,viewport_ctx.canvas.height);
@@ -164,13 +141,13 @@ function init() {
 
     if (global.grid) {
 	board_ctx.beginPath();
-	for (var x = 0; x <= global.dimension.width; x++) {
+	for (var x = 0; x <= global.world_dim.width; x++) {
 	    board_ctx.moveTo(x*global.cellsize,0);
-	    board_ctx.lineTo(x*global.cellsize,global.dimension.height*global.cellsize);
+	    board_ctx.lineTo(x*global.cellsize,global.world_dim.height*global.cellsize);
 	}
-	for (var y = 0; y <= global.dimension.height; y++) {
+	for (var y = 0; y <= global.world_dim.height; y++) {
 	    board_ctx.moveTo(0,y*global.cellsize);
-	    board_ctx.lineTo(global.dimension.width*global.cellsize,y*global.cellsize);
+	    board_ctx.lineTo(global.world_dim.width*global.cellsize,y*global.cellsize);
 	}
 	board_ctx.closePath();
 	board_ctx.stroke();
@@ -416,11 +393,11 @@ function animate() {
 function update_viewport(p) {
     var update_viewport_start = Date.now();
 
-    var width = global.dimension.width;
-    var height = global.dimension.height;
+    var width = global.world_dim.width;
+    var height = global.world_dim.height;
 
-    var x = p.position.x - p.scale*view.width/2;
-    var y = p.position.y - p.scale*view.height/2;
+    var x = p.position.x - p.scale*global.view_dim.width/2;
+    var y = p.position.y - p.scale*global.view_dim.height/2;
 
 /*    if (x < 0) {
 	x = 0;
@@ -479,8 +456,8 @@ function update_viewport(p) {
 }
 
 function update_map(p) {
-    var width = map_dim.width;
-    var height = map_dim.height;
+    var width = global.map_dim.width;
+    var height = global.map_dim.height;
 
     map_ctx.clearRect( 0, 0, map_ctx.canvas.width, map_ctx.canvas.height);
     map_ctx.strokeRect(0, 0, map_ctx.canvas.width, map_ctx.canvas.height);
@@ -497,8 +474,8 @@ function update_map(p) {
 }
 
 function update_radar(p) {
-    var width = global.dimension.width/16;
-    var height = global.dimension.height/16;
+    var width = global.world_dim.width/16;
+    var height = global.world_dim.height/16;
 
     radar_ctx.strokeStyle = 'rgb(255,255,255)';
     radar_ctx.fillRect( 0, 0, radar_ctx.canvas.width, radar_ctx.canvas.height);

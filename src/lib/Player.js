@@ -1,7 +1,7 @@
-// Player Constructor
-
 const constant = require('./constant.js');
 var global = require('./global.js');
+
+// Player Constructor
 
 module.exports = function Player() {
     this.id = undefined;
@@ -12,8 +12,8 @@ module.exports = function Player() {
     this.speed = 1.0;
     this.size = 25;
     this.position = {
-	x: Math.floor(Math.random() * (global.dimension.width-50)) + 25,
-	y: Math.floor(Math.random() * (global.dimension.height-50)) + 25,
+	x: Math.floor(Math.random() * (global.world_dim.width-50)) + 25,
+	y: Math.floor(Math.random() * (global.world_dim.height-50)) + 25,
     };
     this.shade  = {
 	h: Math.floor(Math.random()*360),

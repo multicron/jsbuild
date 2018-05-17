@@ -19,43 +19,10 @@ logger("server.js starting up");
 
 app.use(express.static(__dirname + '/../client'));
 
-// Agar Game settings
-var conf = {
-    "host": "0.0.0.0",
-    "port": 3000,
-    "networkUpdateFactor": 40,
-};
-
-// Import utilities.
-var util = require('./lib/util');
-
-// For Blubio
-
 var all_cells = [];
-
-var viewport_player;
-
-var direction_delta = {stopped: { x: 0,  y: 0  },
-		       up:      { x: 0,  y: -1 },
-		       down:    { x: 0,  y: 1  },
-		       left:    { x: -1, y: 0  },
-		       right:   { x: 1,  y: 0  },
-		      };
-
-var view = {
-    width: 100,
-    height: 70,
-};
-
-var map_dim = {
-    width: global.dimension.width / 10,
-    height: global.dimension.width / 10,
-};
-
 var users = [];
 var sockets = {};
 var immortal_socket;
-
 
 var players = [];
 var food = [];
@@ -73,9 +40,9 @@ function init_game() {
     logger("init_game");
     // Initialize "all cells" array for collision detection
 
-    for (var i=0;i<global.dimension.width;i++) {
+    for (var i=0;i<global.world_dim.width;i++) {
 	all_cells[i]=[];
-	for (var j=0;j<global.dimension.height;j++) {
+	for (var j=0;j<global.world_dim.height;j++) {
 	    all_cells[i][j]=0;
 	}
     }
@@ -100,9 +67,6 @@ function populate_all_cells(p) {
 function award_collision(killed,killer) {
     killer.size += killed.cells.length;
     killed.size = 1;
-    if (killed === viewport_player) {
-	viewport_player = killer;
-    }
 }
 
 function remove_dead_players() {
@@ -169,21 +133,23 @@ function tick_game() {
 
     remove_dead_players();
 
-    if (1) {
-	for (i in players) {
-    	    var player_id = players[i].id;
-    	    var player_socket = sockets[player_id];
-    	    if (player_socket) {
-    		player_socket.volatile.emit('s_update_players',players);
-    		logger("Sent s_update_players to ",players[i].id);
-    	    }
-	}
-    }
+    send_client_updates();
 
     while (players.length < global.minplayers) {
 	add_player();
     }
 
+}
+
+function send_client_updates {
+    for (i in players) {
+    	var player_id = players[i].id;
+    	var player_socket = sockets[player_id];
+    	if (player_socket) {
+    	    player_socket.volatile.emit('s_update_players',players);
+    	    logger("Sent s_update_players to ",players[i].id);
+    	}
+    }
 }
 
 function one_step(p) {
@@ -284,15 +250,15 @@ function move_player(p) {
 }
 
 function check_edge_death(p) {
-    if (p.position.x < 0 || p.position.y < 0 || p.position.x >= global.dimension.width || p.position.y >= global.dimension.height) {
+    if (p.position.x < 0 || p.position.y < 0 || p.position.x >= global.world_dim.width || p.position.y >= global.world_dim.height) {
 	return true;
     }
     return false;
 }
 
 function clear_all_cells() {
-    for (var i=0;i<global.dimension.width;i++) {
-	for (var j=0;j<global.dimension.height;j++) {
+    for (var i=0;i<global.world_dim.width;i++) {
+	for (var j=0;j<global.world_dim.height;j++) {
 	    all_cells[i][j]=0;
 	}
     }
@@ -404,12 +370,11 @@ init_game();
 
 setInterval(tick_game,100);
 //setInterval(log_status,5000);
-//setInterval(sendUpdates, 1000 / conf.networkUpdateFactor);
 
 
 // Don't touch, IP configurations.
-var ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || conf.host;
-var serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || conf.port;
+var ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || global.host;
+var serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || global.port;
 http.listen( serverport, ipaddress, function() {
     logger('[DEBUG] Listening on ' + ipaddress + ':' + serverport);
 });
