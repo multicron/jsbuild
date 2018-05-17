@@ -7,6 +7,10 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var debug = require('debug')('blubio');
 
+var global = require('lib/global.js');
+const constant = require('lib/constant.js');
+const Player = require('lib/Player.js');
+
 var logger = function(...args) {
     debug(...args);
 };
@@ -27,8 +31,6 @@ var util = require('./lib/util');
 
 // For Blubio
 
-var direction = {stopped: -1, up: 1, down: 2, left: 3, right: 4};
-
 var all_cells = [];
 
 var viewport_player;
@@ -40,29 +42,14 @@ var direction_delta = {stopped: { x: 0,  y: 0  },
 		       right:   { x: 1,  y: 0  },
 		      };
 
-var global = {
-    grid: 0,
-    smallblocks: 0,
-    cellsize: 10,
-    delaycount: 0,
-    startplayers: 50,
-    minplayers: 50,
-    rotateview: false,
-};
-
-var dimension = {
-    width: 500,
-    height: 350,
-};
-
 var view = {
     width: 100,
     height: 70,
 };
 
 var map_dim = {
-    width: dimension.width / 10,
-    height: dimension.width / 10,
+    width: global.dimension.width / 10,
+    height: global.dimension.width / 10,
 };
 
 var users = [];
@@ -81,41 +68,14 @@ function add_player() {
     players.push(player);
 }
 
-// Player Constructor
-
-function Player() {
-    this.id = undefined;
-    this.is_robot = false;
-    this.alive = 1;
-    this.dir = direction.up;
-    this.dash =  (Math.random() > 0.5);
-    this.size = 25;
-    this.position = {
-	x: Math.floor(Math.random() * (dimension.width-50)) + 25,
-	y: Math.floor(Math.random() * (dimension.height-50)) + 25,
-    };
-    this.shade  = {
-	h: Math.floor(Math.random()*360),
-	s: 50,
-	l: 50,
-    };
-    this.shade_delta  = {
-	h: 3.0,
-	s: 1.0,
-	l: 0.5,
-    };
-    this.scale  = 1.0;
-    this.cells = [];
-}
-
 function init_game() {
 
     logger("init_game");
     // Initialize "all cells" array for collision detection
 
-    for (var i=0;i<dimension.width;i++) {
+    for (var i=0;i<global.dimension.width;i++) {
 	all_cells[i]=[];
-	for (var j=0;j<dimension.height;j++) {
+	for (var j=0;j<global.dimension.height;j++) {
 	    all_cells[i][j]=0;
 	}
     }
@@ -156,30 +116,30 @@ function remove_dead_players() {
 
 function turn_right(dir) {
     switch (dir) {
-    case direction.up: 
-	return direction.right;
-    case direction.left: 
-	return direction.up;
-    case direction.down: 
-	return direction.left;
-    case direction.right: 
-	return direction.down;
+    case constant.direction.up: 
+	return constant.direction.right;
+    case constant.direction.left: 
+	return constant.direction.up;
+    case constant.direction.down: 
+	return constant.direction.left;
+    case constant.direction.right: 
+	return constant.direction.down;
     }
-    return direction.stopped;
+    return constant.direction.stopped;
 }
 
 function turn_left(dir) {
     switch (dir) {
-    case direction.up: 
-	return direction.left;
-    case direction.left: 
-	return direction.down;
-    case direction.down: 
-	return direction.right;
-    case direction.right: 
-	return direction.up;
+    case constant.direction.up: 
+	return constant.direction.left;
+    case constant.direction.left: 
+	return constant.direction.down;
+    case constant.direction.down: 
+	return constant.direction.right;
+    case constant.direction.right: 
+	return constant.direction.up;
     }
-    return direction.stopped;
+    return constant.direction.stopped;
 }
 
 function tick_game() {
@@ -296,23 +256,23 @@ function move_player(p) {
     };
     
     switch (p.dir) {
-    case direction.right: 
+    case constant.direction.right: 
 	delta.x = 1;
 	delta.y = 0;
 	break;
-    case direction.down: 
+    case constant.direction.down: 
 	delta.x = 0;
 	delta.y = 1;
 	break;
-    case direction.left: 
+    case constant.direction.left: 
 	delta.x = -1;
 	delta.y = 0;
 	break;
-    case direction.up: 
+    case constant.direction.up: 
 	delta.x = 0;
 	delta.y = -1;
 	break;
-    case direction.stopped:
+    case constant.direction.stopped:
 	delta.x = 0;
 	delta.y = 0;
 	break;
@@ -324,15 +284,15 @@ function move_player(p) {
 }
 
 function check_edge_death(p) {
-    if (p.position.x < 0 || p.position.y < 0 || p.position.x >= dimension.width || p.position.y >= dimension.height) {
+    if (p.position.x < 0 || p.position.y < 0 || p.position.x >= global.dimension.width || p.position.y >= global.dimension.height) {
 	return true;
     }
     return false;
 }
 
 function clear_all_cells() {
-    for (var i=0;i<dimension.width;i++) {
-	for (var j=0;j<dimension.height;j++) {
+    for (var i=0;i<global.dimension.width;i++) {
+	for (var j=0;j<global.dimension.height;j++) {
 	    all_cells[i][j]=0;
 	}
     }
@@ -389,11 +349,11 @@ io.on('connect', function (socket) {
 	if (old_dir == new_dir) {
 	    // Do nothing
 	}
-	else if ((old_dir!=direction.left && old_dir!=direction.right) && (new_dir==direction.left || new_dir==direction.right)) {
+	else if ((old_dir!=constant.direction.left && old_dir!=constant.direction.right) && (new_dir==constant.direction.left || new_dir==constant.direction.right)) {
             logger('Changing direction to vertical',new_dir);
 	    connected_player.dir = new_dir;
 	}
-	else if ((old_dir!=direction.up && old_dir!=direction.down) && (new_dir==direction.up || new_dir==direction.down)) {
+	else if ((old_dir!=constant.direction.up && old_dir!=constant.direction.down) && (new_dir==constant.direction.up || new_dir==constant.direction.down)) {
             logger('Changing direction to horizontal',new_dir);
 	    connected_player.dir = new_dir;
 	}

@@ -11,6 +11,7 @@ var fs = require('fs');
 var obfuscator = require('gulp-javascript-obfuscator');
 var debug = require('gulp-debug');
 var pump = require('pump');
+var env = require('gulp-env');
 
 gulp.task('build', ['build-client', 'move-client', 'build-server', 'test']);
 
@@ -104,6 +105,7 @@ gulp.task('todo', ['lint'], function() {
 });
 
 gulp.task('run', ['build'], function () {
+    env({NODE_PATH: "./src"});
     nodemon({
         delay: 10,
         script: './server/server.js',

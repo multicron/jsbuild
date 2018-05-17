@@ -4,8 +4,9 @@
 
 'use strict';                                    // jshint ignore:line
 const io = require('socket.io-client');          // jshint ignore:line
-const global = require('./global.js');           // jshint ignore:line
-const KEYCODES = require("./keycodes.js");       // jshint ignore:line
+const global = require('../../lib/global.js');           // jshint ignore:line
+const constant = require("../../lib/constant.js");       // jshint ignore:line
+const Player = require("../../lib/Player.js");           // jshint ignore:line
 
 var socket;
 
@@ -30,22 +31,6 @@ var logger = function(...args) {
     })();
   
 
-// var global = {
-//     grid: 0,
-//     smallblocks: 0,
-//     cellsize: 10,
-//     delaycount: 0,
-//     minplayers: 1,
-//     rotateview: false,
-// };
-
-// const KEYCODES = {
-//     LEFT: 37,
-//     UP: 38,
-//     RIGHT: 39,
-//     DOWN: 40,
-// };
-
 var dimension = {
     width: 500,
     height: 350,
@@ -57,8 +42,8 @@ var view = {
 };
 
 var map_dim = {
-    width: dimension.width / 10,
-    height: dimension.width / 10,
+    width: global.dimension.width / 10,
+    height: global.dimension.width / 10,
 };
 
 var board;
@@ -69,8 +54,6 @@ var map;
 var map_ctx;
 var radar;
 var radar_ctx;
-
-var direction = {stopped: -1, up: 1, down: 2, left: 3, right: 4};
 
 var players = [];
 
@@ -119,8 +102,8 @@ function init() {
 
 /*
     test = document.createElement( 'canvas' );
-    test.width = dimension.width * global.cellsize;
-    test.height = dimension.height * global.cellsize;
+    test.width = global.dimension.width * global.cellsize;
+    test.height = global.dimension.height * global.cellsize;
     test_ctx = test.getContext( '2d' );
     test_ctx.translate(test.width,test.height);
     test_ctx.rotate(Math.PI/5);
@@ -146,8 +129,8 @@ function init() {
     // The entire playing field
 
     board = document.createElement( 'canvas' );
-    board.width = dimension.width * global.cellsize;
-    board.height = dimension.height * global.cellsize;
+    board.width = global.dimension.width * global.cellsize;
+    board.height = global.dimension.height * global.cellsize;
     board_ctx = board.getContext( '2d', {alpha: false});
     board_ctx.strokeRect(0,0,board_ctx.canvas.width,board_ctx.canvas.height);
 
@@ -181,13 +164,13 @@ function init() {
 
     if (global.grid) {
 	board_ctx.beginPath();
-	for (var x = 0; x <= dimension.width; x++) {
+	for (var x = 0; x <= global.dimension.width; x++) {
 	    board_ctx.moveTo(x*global.cellsize,0);
-	    board_ctx.lineTo(x*global.cellsize,dimension.height*global.cellsize);
+	    board_ctx.lineTo(x*global.cellsize,global.dimension.height*global.cellsize);
 	}
-	for (var y = 0; y <= dimension.height; y++) {
+	for (var y = 0; y <= global.dimension.height; y++) {
 	    board_ctx.moveTo(0,y*global.cellsize);
-	    board_ctx.lineTo(dimension.width*global.cellsize,y*global.cellsize);
+	    board_ctx.lineTo(global.dimension.width*global.cellsize,y*global.cellsize);
 	}
 	board_ctx.closePath();
 	board_ctx.stroke();
@@ -215,14 +198,14 @@ function mouse_move(event) {
 
 function keycode_to_dir(keycode) {
     switch (keycode) {
-    case KEYCODES.LEFT:
-	return direction.left;
-    case KEYCODES.RIGHT:
-	return direction.right;
-    case KEYCODES.UP:
-	return direction.up;
-    case KEYCODES.DOWN:
-	return direction.down;
+    case constant.keycode.left:
+	return constant.direction.left;
+    case constant.keycode.right:
+	return constant.direction.right;
+    case constant.keycode.up:
+	return constant.direction.up;
+    case constant.keycode.down:
+	return constant.direction.down;
     default:
 	return undefined;
     }
@@ -275,10 +258,10 @@ function mouse_pos_to_dir(passed_point) {
 
     logger("Centered", pt.x, pt.y);
 
-    if (pt.x + tolerance.x < 0 && pt.x < pt.y) return direction.left;
-    if (pt.x - tolerance.x > 0 && pt.x > pt.y) return direction.right;
-    if (pt.y + tolerance.y < 0 && pt.x >= pt.y) return direction.up;
-    if (pt.y - tolerance.y > 0 && pt.x <= pt.y) return direction.down;
+    if (pt.x + tolerance.x < 0 && pt.x < pt.y) return constant.direction.left;
+    if (pt.x - tolerance.x > 0 && pt.x > pt.y) return constant.direction.right;
+    if (pt.y + tolerance.y < 0 && pt.x >= pt.y) return constant.direction.up;
+    if (pt.y - tolerance.y > 0 && pt.x <= pt.y) return constant.direction.down;
 
     return pt;
 }
@@ -352,32 +335,6 @@ function setupSocket(socket) {
         global.kicked = true;
         socket.close();
     });
-}
-
-// Player Constructor
-
-function Player() {
-    this.id = undefined;
-    this.alive = 1;
-    this.dir = direction.up;
-    this.speed = 1.0;
-    this.size = 25;
-    this.position = {
-	x: Math.floor(Math.random() * (dimension.width-50)) + 25,
-	y: Math.floor(Math.random() * (dimension.height-50)) + 25,
-    };
-    this.shade  = {
-	h: Math.floor(Math.random()*360),
-	s: 50,
-	l: 50,
-    };
-    this.shade_delta  = {
-	h: 3.0,
-	s: 1.0,
-	l: 0.5,
-    };
-    this.scale  = 1.0;
-    this.cells = [];
 }
 
 function draw_axes(ctx) {
@@ -459,8 +416,8 @@ function animate() {
 function update_viewport(p) {
     var update_viewport_start = Date.now();
 
-    var width = dimension.width;
-    var height = dimension.height;
+    var width = global.dimension.width;
+    var height = global.dimension.height;
 
     var x = p.position.x - p.scale*view.width/2;
     var y = p.position.y - p.scale*view.height/2;
@@ -500,20 +457,20 @@ function update_viewport(p) {
 
 	viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel*p.scale,height_pixel*p.scale,0,0,width_pixel,height_pixel);
     }
-    else if (p.dir == direction.up) {
+    else if (p.dir == constant.direction.up) {
 	viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
     }
-    else if (p.dir == direction.left) {
+    else if (p.dir == constant.direction.left) {
 	viewport_ctx.translate(width_pixel,0);
 	viewport_ctx.rotate(Math.PI/2);
 	viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
     }
-    else if (p.dir == direction.right) {
+    else if (p.dir == constant.direction.right) {
 	viewport_ctx.translate(0,height_pixel);
 	viewport_ctx.rotate(3*Math.PI/2);
 	viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
     }
-    else if (p.dir == direction.down) {
+    else if (p.dir == constant.direction.down) {
 	viewport_ctx.translate(width_pixel,height_pixel);
 	viewport_ctx.rotate(Math.PI);
 	viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
@@ -540,8 +497,8 @@ function update_map(p) {
 }
 
 function update_radar(p) {
-    var width = dimension.width/16;
-    var height = dimension.height/16;
+    var width = global.dimension.width/16;
+    var height = global.dimension.height/16;
 
     radar_ctx.strokeStyle = 'rgb(255,255,255)';
     radar_ctx.fillRect( 0, 0, radar_ctx.canvas.width, radar_ctx.canvas.height);
