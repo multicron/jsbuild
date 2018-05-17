@@ -230,10 +230,15 @@ function one_step(p) {
 	turn_robot(p);
 	}
     move_player(p);
-    var killer = check_collision(p);
-    if (killer) {
-	award_collision(p,killer);
+    if (check_edge_death(p)) {
 	p.alive = 0;
+    }
+    else {
+	var killer = check_collision(p);
+	if (killer) {
+	    award_collision(p,killer);
+	    p.alive = 0;
+	}
     }
     shift_player(p);
 }
@@ -315,25 +320,13 @@ function move_player(p) {
     p.position.x += delta.x;
     p.position.y += delta.y;
 
-    if (p.position.x < 0) {
-	p.position.x = 0;
-	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
-    }
+}
 
-    if (p.position.y < 0) {
-	p.position.y = 0;
-	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
+function check_edge_death(p) {
+    if (p.position.x < 0 || p.position.y < 0 || p.position.x >= dimension.width || p.position.y >= dimension.height) {
+	return true;
     }
-
-    if (p.position.x >= dimension.width) {
-	p.position.x = dimension.width - 1;
-	p.dir = (Math.random() > 0.5 ? direction.up : direction.down) ;
-    }
-
-    if (p.position.y >= dimension.height) {
-	p.position.y = dimension.height - 1;
-	p.dir = (Math.random() > 0.5 ? direction.left : direction.right) ;
-    }
+    return false;
 }
 
 function clear_all_cells() {
