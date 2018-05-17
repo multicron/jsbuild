@@ -3,7 +3,9 @@
 // jshint devel: true
 
 'use strict';                                    // jshint ignore:line
-var io = require('socket.io-client');            // jshint ignore:line
+const io = require('socket.io-client');          // jshint ignore:line
+const global = require('./global.js');           // jshint ignore:line
+const KEYCODES = require("./keycodes.js");       // jshint ignore:line
 
 var socket;
 
@@ -28,21 +30,21 @@ var logger = function(...args) {
     })();
   
 
-var global = {
-    grid: 0,
-    smallblocks: 0,
-    cellsize: 10,
-    delaycount: 0,
-    minplayers: 1,
-    rotateview: false,
-};
+// var global = {
+//     grid: 0,
+//     smallblocks: 0,
+//     cellsize: 10,
+//     delaycount: 0,
+//     minplayers: 1,
+//     rotateview: false,
+// };
 
-const KEYCODES = {
-    LEFT: 37,
-    UP: 38,
-    RIGHT: 39,
-    DOWN: 40,
-};
+// const KEYCODES = {
+//     LEFT: 37,
+//     UP: 38,
+//     RIGHT: 39,
+//     DOWN: 40,
+// };
 
 var dimension = {
     width: 500,

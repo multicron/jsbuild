@@ -71,6 +71,7 @@ var immortal_socket;
 
 
 var players = [];
+var food = [];
 var robot_counter = 0;
 
 function add_player() {
@@ -87,7 +88,7 @@ function Player() {
     this.is_robot = false;
     this.alive = 1;
     this.dir = direction.up;
-    this.dash = false;  // (Math.random() > 0.5);
+    this.dash =  (Math.random() > 0.5);
     this.size = 25;
     this.position = {
 	x: Math.floor(Math.random() * (dimension.width-50)) + 25,
@@ -192,13 +193,13 @@ function tick_game() {
 	populate_all_cells(players[i]);
     }
 
-    // for (i in players) {
-    // 	if (players[i].alive && players[i].dash) {
-    // 	    one_step(players[i]);
-    // 	}
-    // }
+    for (i in players) {
+    	if (players[i].alive && players[i].dash) {
+    	    one_step(players[i]);
+    	}
+    }
 
-    // remove_dead_players();
+    remove_dead_players();
 
     for (i in players) {
 	if (players[i].alive) {
