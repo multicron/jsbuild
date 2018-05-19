@@ -1,12 +1,15 @@
 // jshint bitwise: true
 // jshint browser: true
 // jshint devel: true
+// jshint strict: true
+// jshint -W097
 
-'use strict';                                    // jshint ignore:line
-const io = require('socket.io-client');          // jshint ignore:line
-const globals = require('../../lib/globals.js');           // jshint ignore:line
-const constant = require("../../lib/constant.js");       // jshint ignore:line
-const Player = require("../../lib/Player.js");           // jshint ignore:line
+'use strict';
+
+const io = require('socket.io-client');
+const globals = require('../../lib/globals.js');
+const constant = require("../../lib/constant.js");
+const Player = require("../../lib/Player.js");
 
 let socket;
 
@@ -38,7 +41,6 @@ let map;
 let map_ctx;
 let radar;
 let radar_ctx;
-
 let players = [];
 
 let all_cells = [];
@@ -70,7 +72,8 @@ function init() {
 
 
     if (!socket) {
-        socket = io({query:"type=player",transports:['websocket']});
+//        socket = io({query:"type=player",transports:['websocket']});
+        socket = io({query:"type=player"});
         setupSocket(socket);
 	socket.emit("c_get_player_id");
     }
@@ -102,8 +105,8 @@ function init() {
     // A radar of the entire board, 1/16th the size of the viewport
 
     radar = document.createElement( 'canvas' );
-    radar.width = (globals.view_dim.width / 4) * globals.cellsize;
-    radar.height = (globals.view_dim.height / 4) * globals.cellsize;
+    radar.width = (globals.view_dim.width / 8) * globals.cellsize;
+    radar.height = (globals.view_dim.height / 8) * globals.cellsize;
     radar_ctx = radar.getContext( '2d' , {alpha: false});
     radar_ctx.imageSmoothingEnabled = true;
 
@@ -132,8 +135,8 @@ function init() {
     page.appendChild(document.createElement('br'));
     page.appendChild( radar );
     page.appendChild(document.createElement('br'));
-    page.appendChild( map );
-    page.appendChild(document.createElement('br'));
+//    page.appendChild( map );
+//    page.appendChild(document.createElement('br'));
 
 
     // The board is not displayed (the map shows it shrunk down)
@@ -527,7 +530,9 @@ function refresh_player(p) {
     }
     
     
-   draw_head(p.cells[p.cells.length - 1]);
+    draw_head(p.cells[p.cells.length - 1]);
+
+    draw_name(p);
     
 }
 
@@ -628,6 +633,14 @@ function draw_head(cell) {
 			    globals.cellsize,
 			    globals.cellsize);
     }
+}
+
+function draw_name(p) {
+    board_ctx.fillStyle = 'white';
+    board_ctx.font = Math.floor(12*p.scale) + 'px Verdana';
+    board_ctx.fillText("#" + p.name + " (" + (p.cells.length+1) + "/" + p.size + ")",
+			 (p.position.x+1)*globals.cellsize,
+			 p.position.y*globals.cellsize);
 }
 
 function draw_line(line,shade) {

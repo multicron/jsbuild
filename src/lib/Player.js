@@ -5,6 +5,7 @@ const globals = require('./globals.js');
 
 module.exports = function Player() {
     this.id = undefined;
+    this.name = undefined;
     this.is_robot = false;
     this.alive = 1;
     this.dir = constant.direction.up;

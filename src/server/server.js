@@ -23,6 +23,7 @@ let all_cells = [];
 let users = [];
 let sockets = {};
 let immortal_socket;
+let player_num = 1;
 
 let players = [];
 let food = [];
@@ -30,6 +31,7 @@ let robot_counter = 0;
 
 function add_player() {
     let player = new Player();
+    player.name = player_num++;
     player.id = "R"+robot_counter++;
     player.is_robot = true;
     players.push(player);
@@ -301,6 +303,7 @@ io.on('connect', function (socket) {
     let currentPlayer; // Just for legacy code
 
     let connected_player = new Player();
+    connected_player.name = player_num++;
     connected_player.id = socket.id;
     connected_player.is_robot = false;
     sockets[connected_player.id] = socket;

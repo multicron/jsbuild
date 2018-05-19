@@ -1,4 +1,4 @@
-module.exports = {
+module.exports = Object.freeze({
     host: "0.0.0.0",
     port: 3000,
     grid: 0,
@@ -22,4 +22,4 @@ module.exports = {
 	width: 50,
 	height: 35,
     },
-};
+});
