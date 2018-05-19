@@ -16,7 +16,7 @@ var logger = function(...args) {
     }
 };
 
-//logger = function() {};
+logger = function() {};
 
 // requestAnim shim layer by Paul Irish
     window.requestAnimFrame = (function(){
@@ -75,6 +75,10 @@ function init() {
 	socket.emit("c_get_player_id");
     }
 
+    const page = document.body;
+
+    page.style.background = global.bgcolor;
+
     // Canvases
 
 /*
@@ -117,23 +121,25 @@ function init() {
     viewport.id = "viewport";
     viewport.width = global.view_dim.width * global.cellsize;
     viewport.height = global.view_dim.height * global.cellsize;
-
+    viewport.style.width = '99%';
+    viewport.style.height = '99%';
+    viewport.style.border = '1px solid black';
+    viewport.style.background = global.bgcolor;
     viewport_ctx = viewport.getContext( '2d', {alpha: false});
-    viewport_ctx.strokeRect(0,0,viewport_ctx.canvas.width,viewport_ctx.canvas.height);
     viewport_ctx.imageSmoothingEnabled = false;
 
-    document.body.appendChild( radar );
-    document.body.appendChild(document.createElement('br'));
-    document.body.appendChild( viewport );
-    document.body.appendChild(document.createElement('br'));
-    document.body.appendChild( map );
-    document.body.appendChild(document.createElement('br'));
+    page.appendChild( viewport );
+    page.appendChild(document.createElement('br'));
+    page.appendChild( radar );
+    page.appendChild(document.createElement('br'));
+    page.appendChild( map );
+    page.appendChild(document.createElement('br'));
 
 
     // The board is not displayed (the map shows it shrunk down)
 
-//    document.body.appendChild( board );
-//    document.body.appendChild(document.createElement('br'));
+//    page.appendChild( board );
+//    page.appendChild(document.createElement('br'));
 
     // Draw the grid, if enabled
 
@@ -372,7 +378,7 @@ function animate() {
 
     clear_board();
 
-    for (var i in players) {
+    for (var i=0; i<players.length; i++) {
 	refresh_player(players[i]);
     }
 
@@ -408,9 +414,8 @@ function update_viewport(p) {
 	}
 */
     viewport_ctx.resetTransform(); // Not implemented in all browsers
-    viewport_ctx.clearRect( 0, 0, viewport_ctx.canvas.width, viewport_ctx.canvas.height);
-    viewport_ctx.strokeRect(0, 0, viewport_ctx.canvas.width, viewport_ctx.canvas.height);
     viewport_ctx.strokeStyle = 'rgb(0,0,0)';
+    viewport_ctx.clearRect( 0, 0, viewport_ctx.canvas.width, viewport_ctx.canvas.height);
 
     // Clip out the portion of the canvas corresponding to where the player is on the board;
 
@@ -474,13 +479,14 @@ function update_map(p) {
 }
 
 function update_radar(p) {
-    var width = global.world_dim.width/16;
-    var height = global.world_dim.height/16;
+    var width = global.world_dim.width/32;
+    var height = global.world_dim.height/32;
 
     radar_ctx.strokeStyle = 'rgb(255,255,255)';
     radar_ctx.fillRect( 0, 0, radar_ctx.canvas.width, radar_ctx.canvas.height);
     radar_ctx.strokeStyle = 'rgb(0,0,0)';
     radar_ctx.strokeRect(0, 0, radar_ctx.canvas.width, radar_ctx.canvas.height);
+    radar_ctx.strokeRect(1, 1, radar_ctx.canvas.width-1, radar_ctx.canvas.height-1);
 
     radar_ctx.drawImage(board,
 			0,0,
@@ -516,12 +522,12 @@ function refresh_player(p) {
 	}
     }
 
-    for (var j in lines) {
+    for (var j=0; j<lines.length; j++) {
 	draw_line(lines[j],shade);
     }
     
     
-   draw_cell(p.cells[p.cells.length - 1],{h:90,l:0,s:0});
+   draw_head(p.cells[p.cells.length - 1]);
     
 }
 
@@ -607,6 +613,23 @@ function draw_cell(cell,shade) {
     }
 }
 
+function draw_head(cell) {
+    board_ctx.fillStyle = global.headcolor;
+
+    if (global.smallblocks) {
+	board_ctx.fillRect((cell.x*global.cellsize)+1,
+			    (cell.y*global.cellsize)+1,
+			    global.cellsize-2,
+			    global.cellsize-2);
+    }
+    else {
+	board_ctx.fillRect((cell.x*global.cellsize),
+			    (cell.y*global.cellsize),
+			    global.cellsize,
+			    global.cellsize);
+    }
+}
+
 function draw_line(line,shade) {
     var color = 'hsl('+shade.h+','+shade.l+'%,'+shade.s+'%)';
 
@@ -627,9 +650,12 @@ function draw_line(line,shade) {
 }
 
 function clear_board() {
-    board_ctx.fillStyle = 'rgb(255,255,255)';
+    board_ctx.fillStyle = global.bgcolor;
+    board_ctx.strokeStyle = 'rgb(255,0,0)';
 
     board_ctx.fillRect(0,0,board_ctx.canvas.width,
+			 board_ctx.canvas.height);
+    board_ctx.strokeRect(0,0,board_ctx.canvas.width,
 			 board_ctx.canvas.height);
 }
 

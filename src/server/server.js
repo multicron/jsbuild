@@ -59,7 +59,7 @@ function update_viewport_scale(p) {
 }
 
 function populate_all_cells(p) {
-    for (var i in p.cells) {
+    for (let i = 0; i< p.cells.length; i++) {
 	all_cells[p.cells[i].x][p.cells[i].y] = p;
     }
 }
@@ -112,12 +112,12 @@ function tick_game() {
 
     var i;
 
-    for (i in players) {
+    for (i=0 ; i<players.length; i++) {
 	update_viewport_scale(players[i]);
 	populate_all_cells(players[i]);
     }
 
-    for (i in players) {
+    for (i=0; i<players.length; i++) {
     	if (players[i].alive && players[i].dash) {
     	    one_step(players[i]);
     	}
@@ -125,7 +125,7 @@ function tick_game() {
 
     remove_dead_players();
 
-    for (i in players) {
+    for (i=0; i<players.length; i++) {
 	if (players[i].alive) {
 	    one_step(players[i]);
 	}
@@ -142,7 +142,7 @@ function tick_game() {
 }
 
 function send_client_updates() {
-    for (let i in players) {
+    for (let i=0; i<players.length; i++) {
     	var player_id = players[i].id;
     	var player_socket = sockets[player_id];
     	if (player_socket) {
@@ -226,7 +226,7 @@ function turn_robot(p) {
     else if (rnd < 0.05) {
 	p.dir = turn_left(p.dir);
     }
-    else if (rnd < 0.10) {
+    else if (rnd < 0.12) {
 	p.dir = turn_right(p.dir);
     }
 }

@@ -2,6 +2,8 @@ module.exports = {
     host: "0.0.0.0",
     port: 3000,
     grid: 0,
+    bgcolor: "#000000",
+    headcolor: "#888888",
     smallblocks: 0,
     cellsize: 10,
     delaycount: 0,
@@ -9,8 +11,8 @@ module.exports = {
     minplayers: 50,
     rotateview: false,
     world_dim: {
-	width: 800,
-	height: 500,
+	width: 500,
+	height: 350,
     },
     view_dim: {
 	width: 100,
