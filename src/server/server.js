@@ -1,17 +1,17 @@
 /*jslint bitwise: true, node: true */
 'use strict';
 
-var express = require('express');
-var app = express();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
-var debug = require('debug')('blubio');
+const express = require('express');
+const app = express();
+const http = require('http').Server(app);
+const io = require('socket.io')(http);
+const debug = require('debug')('blubio');
 
-var global = require('lib/global.js');
+const globals = require('lib/globals.js');
 const constant = require('lib/constant.js');
 const Player = require('lib/Player.js');
 
-var logger = function(...args) {
+let logger = function(...args) {
     debug(...args);
 };
 
@@ -19,17 +19,17 @@ logger("server.js starting up");
 
 app.use(express.static(__dirname + '/../client'));
 
-var all_cells = [];
-var users = [];
-var sockets = {};
-var immortal_socket;
+let all_cells = [];
+let users = [];
+let sockets = {};
+let immortal_socket;
 
-var players = [];
-var food = [];
-var robot_counter = 0;
+let players = [];
+let food = [];
+let robot_counter = 0;
 
 function add_player() {
-    var player = new Player();
+    let player = new Player();
     player.id = "R"+robot_counter++;
     player.is_robot = true;
     players.push(player);
@@ -40,16 +40,16 @@ function init_game() {
     logger("init_game");
     // Initialize "all cells" array for collision detection
 
-    for (var i=0;i<global.world_dim.width;i++) {
+    for (let i=0;i<globals.world_dim.width;i++) {
 	all_cells[i]=[];
-	for (var j=0;j<global.world_dim.height;j++) {
+	for (let j=0;j<globals.world_dim.height;j++) {
 	    all_cells[i][j]=0;
 	}
     }
 
     // Add initial players to the players[] array
 
-    for (var x=0;x<global.startplayers;x++) {
+    for (let x=0;x<globals.startplayers;x++) {
 	add_player();
     }
 }
@@ -70,7 +70,7 @@ function award_collision(killed,killer) {
 }
 
 function remove_dead_players() {
-    var i = players.length;
+    let i = players.length;
     while (i--) {
 	if (!players[i].alive) {
 	    players.splice(i, 1);
@@ -110,7 +110,7 @@ function tick_game() {
 
     clear_all_cells();
 
-    var i;
+    let i;
 
     for (i=0 ; i<players.length; i++) {
 	update_viewport_scale(players[i]);
@@ -135,7 +135,7 @@ function tick_game() {
 
     send_client_updates();
 
-    while (players.length < global.minplayers) {
+    while (players.length < globals.minplayers) {
 	add_player();
     }
 
@@ -143,8 +143,8 @@ function tick_game() {
 
 function send_client_updates() {
     for (let i=0; i<players.length; i++) {
-    	var player_id = players[i].id;
-    	var player_socket = sockets[player_id];
+    	let player_id = players[i].id;
+    	let player_socket = sockets[player_id];
     	if (player_socket) {
     	    player_socket.volatile.emit('s_update_players',players);
     	    logger("Sent s_update_players to ",players[i].id);
@@ -161,7 +161,7 @@ function one_step(p) {
 	p.alive = 0;
     }
     else {
-	var killer = check_collision(p);
+	let killer = check_collision(p);
 	if (killer) {
 	    award_collision(p,killer);
 	    p.alive = 0;
@@ -174,15 +174,15 @@ function one_step(p) {
 function get_collision_object(x,y) {
     if (x <=0 || 
 	y <=0 || 
-	x >= global.world_dim.width ||
-	y >= global.world_dim.height) {
+	x >= globals.world_dim.width ||
+	y >= globals.world_dim.height) {
 	return false;
     }
     return all_cells[x][y];
 }
 
 function check_collision(p) {
-    var c = get_collision_object(p.position.x,p.position.y);
+    let c = get_collision_object(p.position.x,p.position.y);
 
     if (c===false) {
 	return false;
@@ -204,12 +204,12 @@ function shift_player(p) {
 		 });
 
     if (p.cells.length >= p.size) {
-	var tail_position = p.cells.shift();
+	let tail_position = p.cells.shift();
     }
 }
 
 function turn_robot(p) {
-    var rnd = Math.random();
+    let rnd = Math.random();
 
     let new_pos = predict_player_position(p,2);
 
@@ -233,7 +233,7 @@ function turn_robot(p) {
 
 function predict_player_position(p,steps) {
 
-    var delta = {
+    let delta = {
 	x: 0,
 	y: 0,
     };
@@ -277,15 +277,15 @@ function move_player(p) {
 }
 
 function check_edge_death(p) {
-    if (p.position.x < 0 || p.position.y < 0 || p.position.x >= global.world_dim.width || p.position.y >= global.world_dim.height) {
+    if (p.position.x < 0 || p.position.y < 0 || p.position.x >= globals.world_dim.width || p.position.y >= globals.world_dim.height) {
 	return true;
     }
     return false;
 }
 
 function clear_all_cells() {
-    for (var i=0;i<global.world_dim.width;i++) {
-	for (var j=0;j<global.world_dim.height;j++) {
+    for (let i=0;i<globals.world_dim.width;i++) {
+	for (let j=0;j<globals.world_dim.height;j++) {
 	    all_cells[i][j]=0;
 	}
     }
@@ -294,13 +294,13 @@ function clear_all_cells() {
 io.on('connect', function (socket) {
     logger('A user connected!', socket.handshake);
 
-    var type = socket.handshake.query.type;
+    let type = socket.handshake.query.type;
 
     // Initialize new player
 
-    var currentPlayer; // Just for legacy code
+    let currentPlayer; // Just for legacy code
 
-    var connected_player = new Player();
+    let connected_player = new Player();
     connected_player.id = socket.id;
     connected_player.is_robot = false;
     sockets[connected_player.id] = socket;
@@ -311,7 +311,7 @@ io.on('connect', function (socket) {
 
     if (0) {
 	(function () {
-    	    var emit = socket.emit,
+    	    let emit = socket.emit,
             onevent = socket.onevent;
 	    
     	    socket.emit = function () {
@@ -336,7 +336,7 @@ io.on('connect', function (socket) {
     socket.on('c_change_direction', function (new_dir) {
         logger('c_change_direction ' + connected_player.id + ' changing direction to ',new_dir);
 
-	var old_dir = connected_player.dir;
+	let old_dir = connected_player.dir;
 	if (old_dir == new_dir) {
 	    // Do nothing
 	}
@@ -398,8 +398,8 @@ setInterval(tick_game,100);
 
 
 // Don't touch, IP configurations.
-var ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || global.host;
-var serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || global.port;
+let ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || globals.host;
+let serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || globals.port;
 http.listen( serverport, ipaddress, function() {
     logger('[DEBUG] Listening on ' + ipaddress + ':' + serverport);
 });

@@ -4,13 +4,13 @@
 
 'use strict';                                    // jshint ignore:line
 const io = require('socket.io-client');          // jshint ignore:line
-const global = require('../../lib/global.js');           // jshint ignore:line
+const globals = require('../../lib/globals.js');           // jshint ignore:line
 const constant = require("../../lib/constant.js");       // jshint ignore:line
 const Player = require("../../lib/Player.js");           // jshint ignore:line
 
-var socket;
+let socket;
 
-var logger = function(...args) {
+let logger = function(...args) {
     if (console && console.log) {
         console.log(...args);
     }
@@ -30,27 +30,27 @@ logger = function() {};
               };
     })();
   
-var board;
-var board_ctx;
-var viewport;
-var viewport_ctx;
-var map;
-var map_ctx;
-var radar;
-var radar_ctx;
+let board;
+let board_ctx;
+let viewport;
+let viewport_ctx;
+let map;
+let map_ctx;
+let radar;
+let radar_ctx;
 
-var players = [];
+let players = [];
 
-var all_cells = [];
+let all_cells = [];
 
-var viewport_player;
+let viewport_player;
 
 init();
 animate();
 
 function player_by_id(id) {
 //    logger("Player by id",id);
-    var valid_players =  players.filter(function (p) {
+    let valid_players =  players.filter(function (p) {
 	return p.id==id;
 	});
     if (valid_players.length == 1) {
@@ -77,14 +77,14 @@ function init() {
 
     const page = document.body;
 
-    page.style.background = global.bgcolor;
+    page.style.background = globals.bgcolor;
 
     // Canvases
 
 /*
     test = document.createElement( 'canvas' );
-    test.width = global.world_dim.width * global.cellsize;
-    test.height = global.world_dim.height * global.cellsize;
+    test.width = globals.world_dim.width * globals.cellsize;
+    test.height = globals.world_dim.height * globals.cellsize;
     test_ctx = test.getContext( '2d' );
     test_ctx.translate(test.width,test.height);
     test_ctx.rotate(Math.PI/5);
@@ -94,24 +94,24 @@ function init() {
     // A map of the entire board, same size as the viewport
 
     map = document.createElement( 'canvas' );
-    map.width = global.view_dim.width * global.cellsize;
-    map.height = global.view_dim.height * global.cellsize;
+    map.width = globals.view_dim.width * globals.cellsize;
+    map.height = globals.view_dim.height * globals.cellsize;
     map_ctx = map.getContext( '2d' , {alpha: false});
     map_ctx.imageSmoothingEnabled = false;
 
     // A radar of the entire board, 1/16th the size of the viewport
 
     radar = document.createElement( 'canvas' );
-    radar.width = (global.view_dim.width / 4) * global.cellsize;
-    radar.height = (global.view_dim.height / 4) * global.cellsize;
+    radar.width = (globals.view_dim.width / 4) * globals.cellsize;
+    radar.height = (globals.view_dim.height / 4) * globals.cellsize;
     radar_ctx = radar.getContext( '2d' , {alpha: false});
     radar_ctx.imageSmoothingEnabled = true;
 
     // The entire playing field
 
     board = document.createElement( 'canvas' );
-    board.width = global.world_dim.width * global.cellsize;
-    board.height = global.world_dim.height * global.cellsize;
+    board.width = globals.world_dim.width * globals.cellsize;
+    board.height = globals.world_dim.height * globals.cellsize;
     board_ctx = board.getContext( '2d', {alpha: false});
     board_ctx.strokeRect(0,0,board_ctx.canvas.width,board_ctx.canvas.height);
 
@@ -119,12 +119,12 @@ function init() {
 
     viewport = document.createElement( 'canvas' );
     viewport.id = "viewport";
-    viewport.width = global.view_dim.width * global.cellsize;
-    viewport.height = global.view_dim.height * global.cellsize;
+    viewport.width = globals.view_dim.width * globals.cellsize;
+    viewport.height = globals.view_dim.height * globals.cellsize;
     viewport.style.width = '99%';
     viewport.style.height = '99%';
     viewport.style.border = '1px solid black';
-    viewport.style.background = global.bgcolor;
+    viewport.style.background = globals.bgcolor;
     viewport_ctx = viewport.getContext( '2d', {alpha: false});
     viewport_ctx.imageSmoothingEnabled = false;
 
@@ -145,15 +145,15 @@ function init() {
 
     board_ctx.strokeStyle = 'rgb(205,205,205)';
 
-    if (global.grid) {
+    if (globals.grid) {
 	board_ctx.beginPath();
-	for (var x = 0; x <= global.world_dim.width; x++) {
-	    board_ctx.moveTo(x*global.cellsize,0);
-	    board_ctx.lineTo(x*global.cellsize,global.world_dim.height*global.cellsize);
+	for (let x = 0; x <= globals.world_dim.width; x++) {
+	    board_ctx.moveTo(x*globals.cellsize,0);
+	    board_ctx.lineTo(x*globals.cellsize,globals.world_dim.height*globals.cellsize);
 	}
-	for (var y = 0; y <= global.world_dim.height; y++) {
-	    board_ctx.moveTo(0,y*global.cellsize);
-	    board_ctx.lineTo(global.world_dim.width*global.cellsize,y*global.cellsize);
+	for (let y = 0; y <= globals.world_dim.height; y++) {
+	    board_ctx.moveTo(0,y*globals.cellsize);
+	    board_ctx.lineTo(globals.world_dim.width*globals.cellsize,y*globals.cellsize);
 	}
 	board_ctx.closePath();
 	board_ctx.stroke();
@@ -173,10 +173,10 @@ function init() {
 function mouse_move(event) {
     logger("Mouse Move");
     logger("Mouse", event.pageX,event.pageY);
-    var pt = get_mouse_pos(viewport, event);
+    let pt = get_mouse_pos(viewport, event);
     logger("MousePos", pt);
-    var new_dir = mouse_pos_to_dir(pt);
-    var old_dir = viewport_player.dir;
+    let new_dir = mouse_pos_to_dir(pt);
+    let old_dir = viewport_player.dir;
 }
 
 function keycode_to_dir(keycode) {
@@ -199,7 +199,7 @@ function key_down(event) {
 
     logger("Keydown");
     logger("Key", event.which);
-    var new_dir = keycode_to_dir(event.which);
+    let new_dir = keycode_to_dir(event.which);
     logger("Direction", new_dir);
 
     if (new_dir) {
@@ -214,7 +214,7 @@ function log_event(event) {
 }
 
 function get_mouse_pos(canvas, event) {
-    var rect = canvas.getBoundingClientRect();
+    let rect = canvas.getBoundingClientRect();
     return {
         x: (event.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
         y: (event.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
@@ -222,16 +222,16 @@ function get_mouse_pos(canvas, event) {
 }
 
 function mouse_pos_to_dir(passed_point) {
-    var pt = {x: passed_point.x,
+    let pt = {x: passed_point.x,
 	      y: passed_point.y
 	     };
     
-    var center = {
+    let center = {
 	x: viewport.width / 2,
 	y: viewport.height / 2
     };
 
-    var tolerance = {
+    let tolerance = {
 	x: 5,
 	y: 5
     };
@@ -255,12 +255,12 @@ function setupSocket(socket) {
 
     socket.on('connect_failed', function () {
         socket.close();
-        global.disconnected = true;
+        globals.disconnected = true;
     });
 
     socket.on('disconnect', function () {
         socket.close();
-        global.disconnected = true;
+        globals.disconnected = true;
     });
 
     socket.on("server_setup", function() {
@@ -300,28 +300,28 @@ function setupSocket(socket) {
     });
 
     socket.on('player_died', function () {
-        global.gameStart = false;
-        global.died = true;
+        globals.gameStart = false;
+        globals.died = true;
         window.setTimeout(function() {
             document.getElementById('gameAreaWrapper').style.opacity = 0;
             document.getElementById('startMenuWrapper').style.maxHeight = '1000px';
-            global.died = false;
-            if (global.animLoopHandle) {
-                window.cancelAnimationFrame(global.animLoopHandle);
-                global.animLoopHandle = undefined;
+            globals.died = false;
+            if (globals.animLoopHandle) {
+                window.cancelAnimationFrame(globals.animLoopHandle);
+                globals.animLoopHandle = undefined;
             }
         }, 2500);
     });
 
     socket.on('player_kicked', function (data) {
-        global.gameStart = false;
-        global.kicked = true;
+        globals.gameStart = false;
+        globals.kicked = true;
         socket.close();
     });
 }
 
 function draw_axes(ctx) {
-    for (var x = -1000; x <= 1000; x+=10) {
+    for (let x = -1000; x <= 1000; x+=10) {
 	ctx.beginPath();
 	ctx.moveTo(x,-1000);
 	if (x < 0) {
@@ -337,7 +337,7 @@ function draw_axes(ctx) {
 	ctx.closePath();
 	ctx.stroke();
     }
-    for (var y = -1000; y <= 1000; y+=10) {
+    for (let y = -1000; y <= 1000; y+=10) {
 	ctx.beginPath();
 	ctx.moveTo(-1000,y);
 	if (y < 0) {
@@ -355,7 +355,7 @@ function draw_axes(ctx) {
     }
 }
 
-var delaycount = 0;
+let delaycount = 0;
 
 function request_player_update() {
     socket.emit('c_request_player_update');
@@ -371,14 +371,14 @@ function animate() {
 
     if (0) {
 	socket.emit('c_latency', Date.now(), function(startTime) {
-	    var latency = Date.now() - startTime;
+	    let latency = Date.now() - startTime;
 	    logger("Latency to server is ",latency);
 	});
     }
 
     clear_board();
 
-    for (var i=0; i<players.length; i++) {
+    for (let i=0; i<players.length; i++) {
 	refresh_player(players[i]);
     }
 
@@ -397,13 +397,13 @@ function animate() {
 }
 
 function update_viewport(p) {
-    var update_viewport_start = Date.now();
+    let update_viewport_start = Date.now();
 
-    var width = global.world_dim.width;
-    var height = global.world_dim.height;
+    let width = globals.world_dim.width;
+    let height = globals.world_dim.height;
 
-    var x = p.position.x - p.scale*global.view_dim.width/2;
-    var y = p.position.y - p.scale*global.view_dim.height/2;
+    let x = p.position.x - p.scale*globals.view_dim.width/2;
+    let y = p.position.y - p.scale*globals.view_dim.height/2;
 
 /*    if (x < 0) {
 	x = 0;
@@ -419,13 +419,13 @@ function update_viewport(p) {
 
     // Clip out the portion of the canvas corresponding to where the player is on the board;
 
-    var x_pixel = x * global.cellsize;
-    var y_pixel = y * global.cellsize;
+    let x_pixel = x * globals.cellsize;
+    let y_pixel = y * globals.cellsize;
 
-    var width_pixel = viewport_ctx.canvas.width;
-    var height_pixel = viewport_ctx.canvas.height;
+    let width_pixel = viewport_ctx.canvas.width;
+    let height_pixel = viewport_ctx.canvas.height;
 
-    if (!global.rotateview) {
+    if (!globals.rotateview) {
 
 //	viewport_ctx.drawImage(board,
 //			       x_crop,
@@ -461,8 +461,8 @@ function update_viewport(p) {
 }
 
 function update_map(p) {
-    var width = global.map_dim.width;
-    var height = global.map_dim.height;
+    let width = globals.map_dim.width;
+    let height = globals.map_dim.height;
 
     map_ctx.clearRect( 0, 0, map_ctx.canvas.width, map_ctx.canvas.height);
     map_ctx.strokeRect(0, 0, map_ctx.canvas.width, map_ctx.canvas.height);
@@ -479,8 +479,8 @@ function update_map(p) {
 }
 
 function update_radar(p) {
-    var width = global.world_dim.width/32;
-    var height = global.world_dim.height/32;
+    let width = globals.world_dim.width/32;
+    let height = globals.world_dim.height/32;
 
     radar_ctx.strokeStyle = 'rgb(255,255,255)';
     radar_ctx.fillRect( 0, 0, radar_ctx.canvas.width, radar_ctx.canvas.height);
@@ -501,28 +501,28 @@ function update_radar(p) {
 function refresh_player(p) {
 //    adjust_shade(p.shade,p.shade_delta,p.shade);
 
-    var shade = {
+    let shade = {
 	h:p.shade.h,
 	l:p.shade.l,
 	s:p.shade.s,
     };
 
-    var shade_delta = {
+    let shade_delta = {
 	h:p.shade_delta.h,
 	l:p.shade_delta.l,
 	s:p.shade_delta.s,
     };
 
-    var lines = cells_to_lines(p.cells);
+    let lines = cells_to_lines(p.cells);
 
     if (0) {
-	for (var i=0; i < (p.cells.length - 1); i++) {
+	for (let i=0; i < (p.cells.length - 1); i++) {
 	    draw_cell(p.cells[i],{h:0,l:50,s:50});	
 	    //	adjust_shade(shade,shade_delta,{h:0,l:50,s:50});
 	}
     }
 
-    for (var j=0; j<lines.length; j++) {
+    for (let j=0; j<lines.length; j++) {
 	draw_line(lines[j],shade);
     }
     
@@ -535,11 +535,11 @@ function cells_to_lines (cells) {
 
     if (cells.length <= 0) return;
 
-    var start_x,start_y;
-    var end_x,end_y;
-    var start, end;
-    var lines = [];
-    var line;
+    let start_x,start_y;
+    let end_x,end_y;
+    let start, end;
+    let lines = [];
+    let line;
 
     function push_line(cell) {
 	lines.push({start:{x:start_x,y:start_y},end:{x:end_x,y:end_y}});
@@ -556,10 +556,10 @@ function cells_to_lines (cells) {
     start_x = end_x = cells[0].x;
     start_y = end_y = cells[0].y;
 
-    var horiz = false;
-    var vert = false;
+    let horiz = false;
+    let vert = false;
 
-    for (var i = 1 ; i < cells.length; i++) {
+    for (let i = 1 ; i < cells.length; i++) {
 	let cell = cells[i];
 
 	if (cell.x != end_x && cell.y != end_y) {
@@ -595,62 +595,62 @@ function cells_to_lines (cells) {
 }
 
 function draw_cell(cell,shade) {
-    var color = 'hsl('+shade.h+','+shade.l+'%,'+shade.s+'%)';
+    let color = 'hsl('+shade.h+','+shade.l+'%,'+shade.s+'%)';
 
     board_ctx.fillStyle = color;
 
-    if (global.smallblocks) {
-	board_ctx.fillRect((cell.x*global.cellsize)+1,
-			    (cell.y*global.cellsize)+1,
-			    global.cellsize-2,
-			    global.cellsize-2);
+    if (globals.smallblocks) {
+	board_ctx.fillRect((cell.x*globals.cellsize)+1,
+			    (cell.y*globals.cellsize)+1,
+			    globals.cellsize-2,
+			    globals.cellsize-2);
     }
     else {
-	board_ctx.fillRect((cell.x*global.cellsize),
-			    (cell.y*global.cellsize),
-			    global.cellsize,
-			    global.cellsize);
+	board_ctx.fillRect((cell.x*globals.cellsize),
+			    (cell.y*globals.cellsize),
+			    globals.cellsize,
+			    globals.cellsize);
     }
 }
 
 function draw_head(cell) {
-    board_ctx.fillStyle = global.headcolor;
+    board_ctx.fillStyle = globals.headcolor;
 
-    if (global.smallblocks) {
-	board_ctx.fillRect((cell.x*global.cellsize)+1,
-			    (cell.y*global.cellsize)+1,
-			    global.cellsize-2,
-			    global.cellsize-2);
+    if (globals.smallblocks) {
+	board_ctx.fillRect((cell.x*globals.cellsize)+1,
+			    (cell.y*globals.cellsize)+1,
+			    globals.cellsize-2,
+			    globals.cellsize-2);
     }
     else {
-	board_ctx.fillRect((cell.x*global.cellsize),
-			    (cell.y*global.cellsize),
-			    global.cellsize,
-			    global.cellsize);
+	board_ctx.fillRect((cell.x*globals.cellsize),
+			    (cell.y*globals.cellsize),
+			    globals.cellsize,
+			    globals.cellsize);
     }
 }
 
 function draw_line(line,shade) {
-    var color = 'hsl('+shade.h+','+shade.l+'%,'+shade.s+'%)';
+    let color = 'hsl('+shade.h+','+shade.l+'%,'+shade.s+'%)';
 
     board_ctx.fillStyle = color;
 
 //    logger("Line ",line.start.x,line.start.y,"to",line.end.x,line.end.y);
 
-    var line_left = Math.min(line.end.x,line.start.x);
-    var line_top  = Math.min(line.end.y,line.start.y);
+    let line_left = Math.min(line.end.x,line.start.x);
+    let line_top  = Math.min(line.end.y,line.start.y);
 
-    var width = Math.abs((line.end.x - line.start.x))+1;
-    var height = Math.abs((line.end.y - line.start.y))+1;
+    let width = Math.abs((line.end.x - line.start.x))+1;
+    let height = Math.abs((line.end.y - line.start.y))+1;
 
-    board_ctx.fillRect(line_left*global.cellsize,
-		       line_top*global.cellsize,
-		       width * global.cellsize,
-		       height * global.cellsize);
+    board_ctx.fillRect(line_left*globals.cellsize,
+		       line_top*globals.cellsize,
+		       width * globals.cellsize,
+		       height * globals.cellsize);
 }
 
 function clear_board() {
-    board_ctx.fillStyle = global.bgcolor;
+    board_ctx.fillStyle = globals.bgcolor;
     board_ctx.strokeStyle = 'rgb(255,0,0)';
 
     board_ctx.fillRect(0,0,board_ctx.canvas.width,
