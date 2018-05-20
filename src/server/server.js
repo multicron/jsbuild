@@ -11,11 +11,22 @@ const globals = require('lib/globals.js');
 const constant = require('lib/constant.js');
 const Player = require('lib/Player.js');
 
+const Phyper = require("lib/Phyper.js");
+
 let logger = function(...args) {
     debug(...args);
 };
 
 logger("server.js starting up");
+
+const p = new Phyper();
+
+logger(p.div(
+    p.a("Link to Google",{href: "http://www.google.com/"},{target: "_top"}),
+    p.br({clear:null}),
+    p.select({id:"blah1"},[0,1,2,3,4,5,6,7,8,9].map(x => p.option({value: x},x==5 ? {selected: null} : {}))),
+    p.a("Link to Mauicomputing",{href: "http://www.google.com/"})
+    ));
 
 app.use(express.static(__dirname + '/../client'));
 
