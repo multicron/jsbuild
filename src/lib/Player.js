@@ -11,7 +11,7 @@ module.exports = function Player() {
     this.dir = constant.direction.up;
     this.dash =  0; // (Math.random() > 0.5);
     this.speed = 1.0;
-    this.size = 25;
+    this.size = 100;
     this.position = {
 	x: Math.floor(Math.random() * (globals.world_dim.width-50)) + 25,
 	y: Math.floor(Math.random() * (globals.world_dim.height-50)) + 25,
@@ -28,4 +28,7 @@ module.exports = function Player() {
     };
     this.scale  = 1.0;
     this.cells = [];
+    this.cells_update = [];
+    this.cells_shift = 0;
+    this.lines = [];
 };

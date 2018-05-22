@@ -10,7 +10,9 @@ const io = require('socket.io-client');
 const globals = require('../../lib/globals.js');
 const constant = require("../../lib/constant.js");
 const Player = require("../../lib/Player.js");
+
 const Phyper = require("../../lib/Phyper.js");
+const html = new Phyper();
 
 let socket;
 
@@ -42,8 +44,11 @@ let map;
 let map_ctx;
 let radar;
 let radar_ctx;
+let div_server_status = document.createElement('div');
+let div_login = document.createElement('div');
 let players = [];
 let server_status = {};
+let client_status = {};
 
 let all_cells = [];
 
@@ -52,7 +57,7 @@ let viewport_player;
 init();
 animate();
 
-function player_by_id(id) {
+function get_player_by_id(id) {
 //    logger("Player by id",id);
     let valid_players =  players.filter(function (p) {
 	return p.id==id;
@@ -80,30 +85,32 @@ function init() {
 	socket.emit("c_get_player_id");
     }
 
-    const html = new Phyper();
-
     const page = document.body;
 
     page.style.background = globals.bgcolor;
 
     // A div for server status
 
-    const div_server_status = document.createElement('div');
     div_server_status.style.cssText = html.CSS({"background-color": "green",
+						"color": "white",
 						opacity: "0.5",
 						display: "inline-block",
 						position: "fixed",
 						top: 0,
 						left: 0,
 						width: "100%",
-						height: "10%",
+						height: "25%",
 						margin: "auto",
 						overflow: "auto"
 					       });
 
+    div_server_status.innerHTML = html.div(html.a("Server Status"));
+
+//    $(div_server_status).hide();
+    page.appendChild(div_server_status);
+
     // A div for the entering/exiting overlay
 
-    const div_login = document.createElement('div');
     div_login.style.cssText = html.CSS({"background-color": "white",
 				  opacity: "0.7",
 				  display: "inline-block",
@@ -137,9 +144,6 @@ function init() {
 				       "You:",html.input({type: "text", name: "you"}),
 				       html.input({type: "submit", name: "process"}))
 			    );
-
-//    $(div_server_status).hide();
-    page.appendChild(div_server_status);
 
     $(div_login).hide();
     page.appendChild(div_login);
@@ -235,6 +239,22 @@ function init() {
     window.setInterval(request_timestamp,100);
 }
 
+function update_status() {
+    let status = "";
+
+    for (let category in server_status) {
+	status += server_status[category] + "<br>";
+    }
+
+    for (let category in client_status) {
+	status += client_status[category] + "<br>";
+    }
+
+    logger(status);
+
+    div_server_status.innerHTML = html.div(status);
+}
+
 function mouse_move(event) {
     logger("Mouse Move");
     logger("Mouse", event.pageX,event.pageY);
@@ -314,6 +334,20 @@ function mouse_pos_to_dir(passed_point) {
     return pt;
 }
 
+function update_player_cells (player_id, cells_update, cells_shift) {
+    let player = get_player_by_id(player_id);
+    let cells = player.cells;
+
+    cells.push(cells_update[0]);
+
+    while (cells_shift > 0) {
+	cells.shift();
+	cells_shift--;
+    }
+
+    return cells;
+}
+
 function setupSocket(socket) {
     socket.on('pongcheck', function () {
     });
@@ -362,8 +396,23 @@ function setupSocket(socket) {
     socket.on('s_update_client', function (data) {
 //	logger("Got s_update_client");
 	
+	for (let i=0; i<data.players.length; i++) {
+	    let cells = update_player_cells(data.players[i].id, 
+					    data.players[i].cells_update,
+					    data.players[i].cells_shift
+					   );
+	    
+	    data.players[i].cells = cells;
+	}
+
 	players = data.players;
-	server_status = data.status;
+	
+    });
+
+    socket.on('s_server_status', function (data) {
+//	logger("Got s_server_status");
+	
+	server_status = data.server_status;
     });
 
     socket.on('player_died', function () {
@@ -436,6 +485,8 @@ function animate() {
     window.requestAnimFrame( animate );
     //    socket.emit('c_request_player_update');
 
+    let animate_start = Date.now();
+
     if (0) {
 	socket.emit('c_latency', Date.now(), function(startTime) {
 	    let latency = Date.now() - startTime;
@@ -445,11 +496,15 @@ function animate() {
 
     clear_board();
 
+    let refresh_player_start = Date.now();
+
     for (let i=0; i<players.length; i++) {
 	refresh_player(players[i]);
     }
 
-    viewport_player = player_by_id(socket.id);
+    client_status.refresh_player = "refresh_player took " + (Date.now() - refresh_player_start) + "ms.";
+
+    viewport_player = get_player_by_id(socket.id);
 
 //    logger("Viewport player id",viewport_player.id);
 
@@ -461,6 +516,11 @@ function animate() {
 	update_radar(viewport_player);
     }
 
+    update_status();
+
+    client_status.animate = "animate took " + (Date.now() - animate_start) + "ms.";
+
+    
 }
 
 function update_viewport(p) {
@@ -524,7 +584,8 @@ function update_viewport(p) {
 	viewport_ctx.rotate(Math.PI);
 	viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
     }
-    logger("Viewport update took ",Date.now() - update_viewport_start, "ms");
+    client_status.viewport_update = "Viewport update took " +(Date.now() - update_viewport_start) + "ms";
+//    logger("Viewport update took ",Date.now() - update_viewport_start, "ms");
 }
 
 function update_map(p) {
@@ -580,7 +641,7 @@ function refresh_player(p) {
 	s:p.shade_delta.s,
     };
 
-    let lines = cells_to_lines(p.cells);
+    p.lines = cells_to_lines(p.cells);
 
     if (0) {
 	for (let i=0; i < (p.cells.length - 1); i++) {
@@ -589,12 +650,14 @@ function refresh_player(p) {
 	}
     }
 
-    for (let j=0; j<lines.length; j++) {
-	draw_line(lines[j],shade);
+    for (let j=0; j<p.lines.length; j++) {
+	draw_line(p.lines[j],shade);
     }
     
     
-    draw_head(p.cells[p.cells.length - 1]);
+//    draw_head(p.cells[p.cells.length - 1]);
+
+    draw_head(p.position);
 
     draw_name(p);
     
@@ -702,7 +765,7 @@ function draw_head(cell) {
 function draw_name(p) {
     board_ctx.fillStyle = 'white';
     board_ctx.font = Math.floor(12*p.scale) + 'px Verdana';
-    board_ctx.fillText("#" + p.name + " (" + (p.cells.length+1) + "/" + p.size + ")",
+    board_ctx.fillText("#" + p.name + " (" + p.size + ")",
 			 (p.position.x+1)*globals.cellsize,
 			 p.position.y*globals.cellsize);
 }
