@@ -6,11 +6,11 @@ const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const debug = require('debug')('blubio');
+const fs = require('fs');
 
 const globals = require('lib/globals.js');
 const constant = require('lib/constant.js');
 const Player = require('lib/Player.js');
-
 const Phyper = require("lib/Phyper.js");
 
 let logger = function(...args) {
@@ -21,13 +21,39 @@ logger("server.js starting up");
 
 const html = new Phyper();
 
-logger(html.div(
-    html.a("Link to Google",{href: "http://www.google.com/"},{target: "_top"}),
-    html.a(["List","of","text"],{href: "http://www.yelp.com/"},{target: "_top"}),
-    html.br({clear:null}),
-    html.select({id:"blah1"},[0,1,2,3,4,5,6,7,8,9].map(x => html.option({value: x},x==5 ? {selected: null} : {}))),
-    html.select({id:"blah2"},Array(10).keys().map(x => html.option({value: x},x==5 ? {selected: null} : {}))),
-    html.a("Link to Mauicomputing",{href: "http://www.google.com/"})
+const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+logger(html.div({style: html.CSS({"background-color": "white",
+				  opacity: "0.7",
+				  display: "inline-block",
+				  position: "fixed",
+				  top: 0,
+				  bottom: 0,
+				  left: 0,
+				  right: 0,
+				  width: "50%",
+				  height: "50%",
+				  margin: "auto"})},
+		html.a("Link to Google",{href: "http://www.google.com/"},{target: "_top"}),
+		html.a(["List","of","text"],{href: "http://www.yelp.com/"},{target: "_top"}),
+		html.br({clear:null}),
+		html.select({id:"demo1"},[0,1,2,3,4,5,6,7,8,9].map(x => html.option({value: x},x==5 ? {selected: null} : {}))),
+		html.select({id:"demo2"},[...Array(20).keys()].map(x => html.option({value: x},x==15 ? {selected: null} : {}))),
+		html.select({id:"demo3"},months.map(x => html.option({value: x},x))),
+		html.select({id:"demo4"},[...months.keys()].map(x => html.option({value: x+1},months[x]))),
+		html.ul(["dogs","cats","birds","hampsters"].map(x => html.li(x + " are the best"))),
+		html.ul(["dogs","cats","birds","hampsters"].reduce((acc,val) => acc + html.li(val + " are the best"),"")),
+		html.table(html.tr(html.td("Hello"),html.td("There"),html.td("How"))),
+		html.a("Link to Mauicomputing",{href: "http://www.google.com/"}),
+		html.br(),
+		html.hr({width:10}),
+		html.textarea("Here is some editable text"),
+		html.form({action: "index.html",method: "get"},
+			  "Bluby:",html.input({type: "text", name: "bluby"}),
+			  "Loves:",html.input({type: "text", name: "loves"}),
+			  "You:",html.input({type: "text", name: "you"}),
+			  html.input({type: "submit", name: "process"}))
+		
     ));
 
 app.use(express.static(__dirname + '/../client'));
@@ -38,9 +64,16 @@ let sockets = {};
 let immortal_socket;
 let player_num = 1;
 
+let status = [];
 let players = [];
 let food = [];
 let robot_counter = 0;
+
+let last_out_bytes = 0;
+let last_out_packets = 0;
+let last_in_bytes = 0;
+let last_in_packets = 0;
+let last_network_monitor = 0;
 
 function add_player() {
     let player = new Player();
@@ -82,6 +115,35 @@ function populate_all_cells(p) {
 function award_collision(killed,killer) {
     killer.size += Math.floor(killed.cells.length/2);
     killed.size = 1;
+}
+
+function monitor_network() {
+    fs.readFile('/proc/net/dev', function(err, data) {
+	if (err) {
+	    throw err;
+	}
+	let re = (/eth0: *(.+)/);
+	let file = data.toString();
+	let match = re.exec(file);
+	let matched_line = match[1];
+	let array = matched_line.split(/ +/);
+	let out_bytes = array[8];
+	let out_packets = array[9];
+	let in_bytes = array[0];
+	let in_packets = array[1];
+
+	let rate_out_bytes = (out_bytes - last_out_bytes);
+	let rate_out_packets = (out_packets - last_out_packets);
+	let rate_in_bytes = (in_bytes - last_in_bytes);
+	let rate_in_packets = (in_packets - last_in_packets);
+
+	network_speed = `Out: ${rate_out_bytes.toFixed(2)} Bps ${rate_out_packets.toFixed(2)} pkt/sec In: ${rate_in_bytes.toFixed(2)} Bps ${rate_in_packets.toFixed(2)} pkt/sec`;
+
+	last_out_bytes = out_bytes;
+	last_out_packets = out_packets;
+	last_in_bytes = in_bytes;
+	last_in_packets = in_packets;
+    });
 }
 
 function remove_dead_players() {
@@ -148,21 +210,34 @@ function tick_game() {
 
     remove_dead_players();
 
-    send_client_updates();
+    s_update_clients();
 
     while (players.length < globals.minplayers) {
 	add_player();
     }
 
+    s_send_status();
+
 }
 
-function send_client_updates() {
+function s_update_clients() {
     for (let i=0; i<players.length; i++) {
     	let player_id = players[i].id;
     	let player_socket = sockets[player_id];
     	if (player_socket) {
-    	    player_socket.volatile.emit('s_update_players',players);
-    	    logger("Sent s_update_players to ",players[i].id);
+    	    player_socket.volatile.emit('s_update_clients',players);
+    	    logger("Sent s_update_clients to ",players[i].id);
+    	}
+    }
+}
+
+function s_update_status() {
+    for (let i=0; i<players.length; i++) {
+    	let player_id = players[i].id;
+    	let player_socket = sockets[player_id];
+    	if (player_socket) {
+    	    player_socket.volatile.emit('s_update_status',status);
+    	    logger("Sent s_update_status to ",players[i].id);
     	}
     }
 }
@@ -367,9 +442,9 @@ io.on('connect', function (socket) {
     });
 
     socket.on('c_request_player_update', function () {
-        logger('c_request_player_update from ' + connected_player.id);
-	socket.emit('s_update_players',players);
-	logger("Sent requested s_update_players to ",connected_player.id);
+        logger('c_request_update_clients from ' + connected_player.id);
+	socket.emit('s_update_clients',players);
+	logger("Sent requested s_update_clients to ",connected_player.id);
     });
 
     socket.on('pingcheck', function () {
@@ -410,6 +485,7 @@ function log_status() {
 init_game();
 
 setInterval(tick_game,100);
+setInterval(monitor_network,1000);
 //setInterval(log_status,5000);
 
 
