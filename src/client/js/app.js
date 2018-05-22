@@ -22,7 +22,7 @@ let logger = function(...args) {
     }
 };
 
-logger = function() {};
+//logger = function() {};
 
 // requestAnim shim layer by Paul Irish
     window.requestAnimFrame = (function(){
@@ -58,12 +58,12 @@ init();
 animate();
 
 function get_player_by_id(id) {
-//    logger("Player by id",id);
+    logger("Player by id",id);
     let valid_players =  players.filter(function (p) {
 	return p.id==id;
 	});
     if (valid_players.length == 1) {
-//	logger("Found player id in players[] array!",id);
+	logger("Found player id in players[] array!",id);
 	return valid_players[0];
     }
     else if (valid_players.length > 1) {
@@ -71,6 +71,7 @@ function get_player_by_id(id) {
 	return valid_players[0];
     }
     else {
+
 	return undefined;
     }
 }
@@ -82,7 +83,7 @@ function init() {
 //        socket = io({query:"type=player",transports:['websocket']});
         socket = io({query:"type=player"});
         setupSocket(socket);
-	socket.emit("c_get_player_id");
+	socket.emit("c_request_world_update");
     }
 
     const page = document.body;
@@ -334,19 +335,57 @@ function mouse_pos_to_dir(passed_point) {
     return pt;
 }
 
-function update_player_cells (player_id, cells_update, cells_shift) {
-    let player = get_player_by_id(player_id);
-    let cells = player.cells;
+function update_player_cells (player_update) {
+    let player = get_player_by_id(player_update.id);
 
-    cells.push(cells_update[0]);
+    logger("Player "+player.id);
 
-    while (cells_shift > 0) {
-	cells.shift();
-	cells_shift--;
+    if (player) {
+	let old_cells = player.cells;
+
+	// Catch the tail up to the server
+
+	while (player.first_cell > player_update.first_cell) {
+	    logger("Shifting player "+player.first_cell);
+	    player.cells.shift();
+	    player.first_cell++;
+	}
+	
+	if (player.last_cell < player_update.last_cell) {
+	    let num_to_add = player_update.last_cell - player.last_cell;
+	    
+	    let first_cell_to_add = player_update.cells.length - num_to_add;
+	    
+	    logger("Adding to player "+num_to_add+" first cell "+first_cell_to_add);
+	    
+	    for (let x = first_cell_to_add; x < player_update.cells.length ; x++) {
+		player.cells.push(player_update.cells[x]);
+	    }
+	}
+	    
+	return old_cells;
     }
-
-    return cells;
 }
+
+function update_players (data) {
+    for (let i=0; i<data.players.length; i++) {
+
+	let player = get_player_by_id(data.players[i].id);
+
+	if (player === undefined) {
+	    logger("Adding new player");
+	    players.push(data.players[i]);
+	}
+	else {
+	    let new_cells = update_player_cells(player,data.players[i]);
+
+	    logger("New Cells " + JSON.stringify(new_cells));
+		
+	    data.players[i].cells = new_cells;
+	    }
+	}
+}
+
 
 function setupSocket(socket) {
     socket.on('pongcheck', function () {
@@ -395,24 +434,23 @@ function setupSocket(socket) {
 
     socket.on('s_update_client', function (data) {
 //	logger("Got s_update_client");
-	
-	for (let i=0; i<data.players.length; i++) {
-	    let cells = update_player_cells(data.players[i].id, 
-					    data.players[i].cells_update,
-					    data.players[i].cells_shift
-					   );
-	    
-	    data.players[i].cells = cells;
-	}
 
-	players = data.players;
-	
+	update_players(data);
+
     });
 
-    socket.on('s_server_status', function (data) {
-//	logger("Got s_server_status");
-	
-	server_status = data.server_status;
+
+    socket.on('s_update_client', function (data) {
+//	logger("Got s_update_client");
+
+	update_players(data);
+
+    });
+
+
+    socket.on('s_update_world', function (data) {
+	logger("Got world update");
+	players = data.players;
     });
 
     socket.on('player_died', function () {
@@ -502,7 +540,7 @@ function animate() {
 	refresh_player(players[i]);
     }
 
-    client_status.refresh_player = "refresh_player took " + (Date.now() - refresh_player_start) + "ms.";
+    client_status.refresh_player = "refresh_player took " + (Date.now() - refresh_player_start) + "ms." + socket.id;
 
     viewport_player = get_player_by_id(socket.id);
 

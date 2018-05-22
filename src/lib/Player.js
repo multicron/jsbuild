@@ -30,5 +30,7 @@ module.exports = function Player() {
     this.cells = [];
     this.cells_update = [];
     this.cells_shift = 0;
+    this.first_cell = undefined;
+    this.last_cell = undefined;
     this.lines = [];
 };

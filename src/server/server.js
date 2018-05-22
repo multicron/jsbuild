@@ -17,7 +17,7 @@ let logger = function(...args) {
     debug(...args);
 };
 
-logger = (() => {});
+//logger = (() => {});
 
 logger("server.js starting up");
 
@@ -229,10 +229,15 @@ function update_clients() {
     let players_without_cells = JSON.parse(JSON.stringify(players));
 
     for (let i=0; i<players_without_cells.length; i++) {
-	// Don't send the "cells" array
+	// Only send the last five cells in the "cells" array.
 
-//	players_without_cells[i].cells = [];
+	let first_cell_to_send = players_without_cells[i].cells.length - 5;
 
+	if (first_cell_to_send < 0) {
+	    first_cell_to_send = 0;
+	}
+
+	players_without_cells[i].cells.splice(first_cell_to_send);
     }
 
     for (let i=0; i<players_without_cells.length; i++) {
@@ -241,8 +246,6 @@ function update_clients() {
     	    player_socket.emit('s_update_client',{players: players_without_cells});
     	    logger("Sent s_update_clients to ",players_without_cells[i].id);
 	    logger(server_status);
-	    players.cells_update = [];
-	    players.cells_shift = 0;
     	}
     }
 
@@ -312,15 +315,15 @@ function shift_player(p) {
 		  y: p.position.y
 		 });
 
-    p.cells_update.push({x: p.position.x,
-			 y: p.position.y
-			});
+    p.last_cell++;
 
     if (p.cells.length >= p.size) {
 	let tail_position = p.cells.shift();
+	p.first_cell++;
     }
 
-    p.cells_shift++;
+    
+
 }
 
 function turn_robot(p) {
@@ -470,6 +473,11 @@ io.on('connect', function (socket) {
         // logger('c_request_update_clients from ' + connected_player.id);
 	// socket.emit('s_update_clients',players);
 	// logger("Sent requested s_update_clients to ",connected_player.id);
+    });
+
+    socket.on('c_request_world_update', function () {
+        logger('c_request_world_update from ' + connected_player.id);
+	socket.emit('s_update_world',{players: players});
     });
 
     socket.on('pingcheck', function () {
