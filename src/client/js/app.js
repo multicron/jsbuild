@@ -43,6 +43,7 @@ let map_ctx;
 let radar;
 let radar_ctx;
 let players = [];
+let server_status = {};
 
 let all_cells = [];
 
@@ -85,11 +86,25 @@ function init() {
 
     page.style.background = globals.bgcolor;
 
+    // A div for server status
+
+    const div_server_status = document.createElement('div');
+    div_server_status.style.cssText = html.CSS({"background-color": "green",
+						opacity: "0.5",
+						display: "inline-block",
+						position: "fixed",
+						top: 0,
+						left: 0,
+						width: "100%",
+						height: "10%",
+						margin: "auto",
+						overflow: "auto"
+					       });
+
     // A div for the entering/exiting overlay
 
-    const div = document.createElement('div');
-
-    div.style.cssText = html.CSS({"background-color": "white",
+    const div_login = document.createElement('div');
+    div_login.style.cssText = html.CSS({"background-color": "white",
 				  opacity: "0.7",
 				  display: "inline-block",
 				  position: "fixed",
@@ -100,18 +115,13 @@ function init() {
 				  width: "50%",
 				  height: "50%",
 				  margin: "auto",
-				  overflow: "auto",
-				  "-webkit-text-size-adjust":"none",
-				  "-ms-text-size-adjust":"none",
-				  "-moz-text-size-adjust":"none",
-				  "text-size-adjust":"none"
+				  overflow: "auto"
 				 });
 
-    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-
-    div.innerHTML = html.div(html.a("Link to Google",{href: "http://www.google.com/"},{target: "_top"}),
+    div_login.innerHTML = html.div(html.a("Link to Google",{href: "http://www.google.com/"},{target: "_top"}),
 			     html.a(["List","of","text"],{href: "http://www.yelp.com/"},{target: "_top"}),
 			     html.br({clear:null}),
+
 			     html.ul(["dogs","cats","birds","hampsters"].map(x => html.li(x + " are the best"))),
 			     html.ul(["dogs","cats","birds","hampsters"].reduce((acc,val) => acc + html.li(val + " are the best"),"")),
 			     html.table(html.tr(html.td("Hello"),html.td("There"),html.td("How"))),
@@ -122,17 +132,17 @@ function init() {
 			     html.form({action: "index.html",method: "get"},
 				       html.select({id:"demo1"},[0,1,2,3,4,5,6,7,8,9].map(x => html.option(x*10,{value: x},x==5 ? {selected: null} : {}))),html.br(),
 				       html.select({id:"demo2"},[...Array(20).keys()].map(x => html.option(x,{value: x},x==15 ? {selected: null} : {}))),html.br(),
-				       html.select({id:"demo3"},months.map(x => html.option({value: x},x))),html.br(),
-				       html.select({id:"demo4"},[...months.keys()].map(x => html.option({value: x+1},months[x]))),html.br(),
 				       "Bluby:",html.input({type: "text", name: "bluby"}),
 				       "Loves:",html.input({type: "text", name: "loves"}),
 				       "You:",html.input({type: "text", name: "you"}),
 				       html.input({type: "submit", name: "process"}))
 			    );
 
-    $(div).hide();
+//    $(div_server_status).hide();
+    page.appendChild(div_server_status);
 
-    page.appendChild(div);
+    $(div_login).hide();
+    page.appendChild(div_login);
 
     // Canvases
 
@@ -349,9 +359,11 @@ function setupSocket(socket) {
     socket.on('serverMSG', function (data) {
     });
 
-    socket.on('s_update_players', function (data) {
-//	logger("Got s_update_players");
-	players = data;
+    socket.on('s_update_client', function (data) {
+//	logger("Got s_update_client");
+	
+	players = data.players;
+	server_status = data.status;
     });
 
     socket.on('player_died', function () {

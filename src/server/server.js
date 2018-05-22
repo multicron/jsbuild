@@ -64,7 +64,7 @@ let sockets = {};
 let immortal_socket;
 let player_num = 1;
 
-let status = [];
+let status = {};
 let players = [];
 let food = [];
 let robot_counter = 0;
@@ -74,6 +74,7 @@ let last_out_packets = 0;
 let last_in_bytes = 0;
 let last_in_packets = 0;
 let last_network_monitor = 0;
+let network_speed = "";
 
 function add_player() {
     let player = new Player();
@@ -210,22 +211,22 @@ function tick_game() {
 
     remove_dead_players();
 
-    s_update_clients();
+    update_clients();
 
     while (players.length < globals.minplayers) {
 	add_player();
     }
 
-    s_send_status();
-
 }
 
-function s_update_clients() {
+function update_clients() {
     for (let i=0; i<players.length; i++) {
     	let player_id = players[i].id;
     	let player_socket = sockets[player_id];
     	if (player_socket) {
-    	    player_socket.volatile.emit('s_update_clients',players);
+    	    player_socket.volatile.emit('s_update_client',{players: players,
+							  status: status
+							  });
     	    logger("Sent s_update_clients to ",players[i].id);
     	}
     }
