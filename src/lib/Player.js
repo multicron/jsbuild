@@ -28,9 +28,7 @@ module.exports = function Player() {
     };
     this.scale  = 1.0;
     this.cells = [];
-    this.cells_update = [];
-    this.cells_shift = 0;
-    this.first_cell = undefined;
-    this.last_cell = undefined;
+    this.first_cell = 0;
+    this.last_cell = 0;
     this.lines = [];
 };

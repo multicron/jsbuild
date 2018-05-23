@@ -105,7 +105,7 @@ function init_game() {
 }
 
 function update_viewport_scale(p) {
-    p.scale = 1 + Math.min(2,(p.cells.length / 1000));
+    p.scale = 1 + Math.min(4,(p.cells.length / 1000));
 }
 
 function populate_all_cells(p) {
@@ -228,17 +228,17 @@ function update_clients() {
 
     let players_without_cells = JSON.parse(JSON.stringify(players));
 
-    for (let i=0; i<players_without_cells.length; i++) {
-	// Only send the last five cells in the "cells" array.
+    // for (let i=0; i<players_without_cells.length; i++) {
+    // 	// Only send the last five cells in the "cells" array.
 
-	let first_cell_to_send = players_without_cells[i].cells.length - 5;
+    // 	let first_cell_to_send = players_without_cells[i].cells.length - 5;
 
-	if (first_cell_to_send < 0) {
-	    first_cell_to_send = 0;
-	}
+    // 	if (first_cell_to_send < 0) {
+    // 	    first_cell_to_send = 0;
+    // 	}
 
-	players_without_cells[i].cells.splice(first_cell_to_send);
-    }
+    // 	players_without_cells[i].cells.splice(first_cell_to_send);
+    // }
 
     for (let i=0; i<players_without_cells.length; i++) {
     	let player_socket = sockets[players_without_cells[i].id];
@@ -487,7 +487,8 @@ io.on('connect', function (socket) {
     socket.on('windowResized', function (data) {
     });
 
-    socket.on('respawn', function () {
+    socket.on('c_log', function (data) {
+	logger("Client says: ",data);
     });
 
     socket.on('disconnect', function () {
