@@ -8,6 +8,7 @@ module.exports = Object.freeze({
     cellsize: 10,
     delaycount: 0,
     startplayers: 50,
+    startsize: 100,
     minplayers: 50,
     rotateview: false,
     world_dim: {

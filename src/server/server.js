@@ -105,7 +105,7 @@ function init_game() {
 }
 
 function update_viewport_scale(p) {
-    p.scale = 1 + Math.min(4,(p.cells.length / 1000));
+    p.scale = 1 + Math.min(4,((p.size - globals.startsize) / 1000));
 }
 
 function populate_all_cells(p) {

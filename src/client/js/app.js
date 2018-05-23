@@ -44,6 +44,8 @@ logger = function() {};
   
 let board;
 let board_ctx;
+let zoomer;
+let zoomer_ctx;
 let viewport;
 let viewport_ctx;
 let map;
@@ -201,6 +203,19 @@ function init() {
     viewport_ctx = viewport.getContext( '2d', {alpha: false});
     viewport_ctx.imageSmoothingEnabled = false;
 
+    // The zoomed-in view for high scale factors
+
+    zoomer = document.createElement( 'canvas' );
+    zoomer.id = "zoomer";
+    zoomer.width = globals.view_dim.width * globals.cellsize;
+    zoomer.height = globals.view_dim.height * globals.cellsize;
+    zoomer.style.width = '99%';
+    zoomer.style.height = '99%';
+    zoomer.style.border = '1px solid black';
+    zoomer.style.background = globals.bgcolor;
+    zoomer_ctx = zoomer.getContext( '2d', {alpha: false});
+    zoomer_ctx.imageSmoothingEnabled = false;
+
     page.appendChild( viewport );
     page.appendChild(document.createElement('br'));
     page.appendChild( radar );
@@ -246,7 +261,9 @@ function init() {
 function update_status() {
     let status = "";
 
-    status.scale = viewport_player.scale;
+    if (viewport_player) {
+	client_status.scale = viewport_player.scale;
+    }
 
     for (let category in server_status) {
 	status += server_status[category] + "<br>";
@@ -554,6 +571,8 @@ function animate() {
     if (viewport_player) {
 	update_viewport(viewport_player);
 
+	update_zoomer(viewport_player);
+
 	update_map(viewport_player);
 
 	update_radar(viewport_player);
@@ -575,14 +594,6 @@ function update_viewport(p) {
     let x = p.position.x - p.scale*globals.view_dim.width/2;
     let y = p.position.y - p.scale*globals.view_dim.height/2;
 
-/*    if (x < 0) {
-	x = 0;
-	}
-
-    if (y < 0) {
-	y = 0;
-	}
-*/
     viewport_ctx.resetTransform(); // Not implemented in all browsers
     viewport_ctx.strokeStyle = 'rgb(0,0,0)';
     viewport_ctx.clearRect( 0, 0, viewport_ctx.canvas.width, viewport_ctx.canvas.height);
@@ -595,8 +606,6 @@ function update_viewport(p) {
     let width_pixel = viewport_ctx.canvas.width;
     let height_pixel = viewport_ctx.canvas.height;
 
-    if (!globals.rotateview) {
-
 //	viewport_ctx.drawImage(board,
 //			       x_crop,
 //			       y_crop,
@@ -607,27 +616,10 @@ function update_viewport(p) {
 //			       width_dst,
 //			       height_dst);
 
-	viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel*p.scale,height_pixel*p.scale,0,0,width_pixel,height_pixel);
-    }
-    else if (p.dir == constant.direction.up) {
-	viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
-    }
-    else if (p.dir == constant.direction.left) {
-	viewport_ctx.translate(width_pixel,0);
-	viewport_ctx.rotate(Math.PI/2);
-	viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
-    }
-    else if (p.dir == constant.direction.right) {
-	viewport_ctx.translate(0,height_pixel);
-	viewport_ctx.rotate(3*Math.PI/2);
-	viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
-    }
-    else if (p.dir == constant.direction.down) {
-	viewport_ctx.translate(width_pixel,height_pixel);
-	viewport_ctx.rotate(Math.PI);
-	viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel,height_pixel,0,0,width_pixel,height_pixel);
-    }
+    viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel*p.scale,height_pixel*p.scale,0,0,width_pixel,height_pixel);
+
     client_status.viewport_update = "Viewport update took " +(Date.now() - update_viewport_start) + "ms";
+
 //    logger("Viewport update took ",Date.now() - update_viewport_start, "ms");
 }
 
@@ -700,7 +692,7 @@ function refresh_player(p) {
     
 //    draw_head(p.cells[p.cells.length - 1]);
 
-    draw_head(p.position);
+    draw_head(p);
 
     draw_name(p);
     
@@ -788,7 +780,10 @@ function draw_cell(cell,shade) {
     }
 }
 
-function draw_head(cell) {
+function draw_head(p) {
+    let color = 'hsl('+p.shade.h+','+p.shade.l+'%,'+p.shade.s+'%)';
+    let cell = p.position;
+
     board_ctx.fillStyle = globals.headcolor;
 
     if (globals.smallblocks) {
@@ -806,8 +801,12 @@ function draw_head(cell) {
 }
 
 function draw_name(p) {
-    board_ctx.fillStyle = 'white';
-    board_ctx.font = Math.floor(12*viewport_player.scale) + 'px Verdana';
+    let color = 'hsl('+p.shade.h+','+p.shade.l+'%,'+p.shade.s+'%)';
+    board_ctx.fillStyle = color;
+
+    let scale = viewport_player ? viewport_player.scale : 1.0;
+
+    board_ctx.font = Math.floor(12*scale) + 'px Verdana';
     board_ctx.fillText("#" + p.name + " (" + p.size + ")",
 			 (p.position.x+1)*globals.cellsize,
 			 p.position.y*globals.cellsize);
