@@ -187,8 +187,8 @@ function init() {
 				    position: "fixed",
 				    top: 0,
 				    right: 0,
-				    width: radar.width,
-				    height: radar.height,
+				    width: (radar.width) + "px",
+				    height: (radar.height) + "px",
 				    margin: "auto",
 				    overflow: "auto",
 				    border: "1px solid white",
@@ -585,21 +585,25 @@ function animate() {
 	refresh_player(players[i]);
     }
 
-    client_status.refresh_player = "refresh_player took " + (Date.now() - refresh_player_start) + "ms." + socket.id;
+    client_status.refresh_player = "refresh_player took " + (Date.now() - refresh_player_start) + "ms.";
 
     viewport_player = get_player_by_id(socket.id);
 
 //    logger("Viewport player id",viewport_player.id);
 
     if (viewport_player) {
-	update_viewport(viewport_player);
-
 	update_zoomer(viewport_player);
 
 	update_map(viewport_player);
 
 	update_radar(viewport_player);
     }
+
+    for (let i=0; i<players.length; i++) {
+	draw_name(players[i]);
+    }
+
+    update_viewport(viewport_player);
 
     update_status();
 
@@ -865,9 +869,19 @@ function draw_name(p) {
     let scale = viewport_player ? viewport_player.scale : 1.0;
 
     board_ctx.font = Math.floor(12*scale) + 'px Verdana';
-    board_ctx.fillText("#" + p.name + " (" + p.size + ")",
-			 (p.position.x+1)*globals.cellsize,
-			 p.position.y*globals.cellsize);
+
+    let name = "#" + p.name;
+
+    if (p.cells.length === p.size) {
+	name += "(" + p.size + ")";
+	}
+    else {
+	name += "(" + p.cells.length + "/" + p.size + ")";
+    }
+	
+    board_ctx.fillText(name,
+		       (p.position.x+1)*globals.cellsize + 1,
+		       p.position.y*globals.cellsize);
 }
 
 function draw_line(line,shade) {

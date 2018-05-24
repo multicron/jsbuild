@@ -108,6 +108,23 @@ function update_viewport_scale(p) {
     p.scale = 1 + Math.min(4,((p.size - globals.startsize) / 1000));
 }
 
+function update_shade(p) {
+
+    p.shade.h += p.shade_delta.h;
+    if (p.shade.h > p.shade_max.h || p.shade.h < p.shade_min.h) {
+	p.shade_delta.h = 0 - p.shade_delta.h;
+    }
+
+    p.shade.l += p.shade_delta.l;
+    if (p.shade.l > p.shade_max.l || p.shade.l < p.shade_min.l) {
+	p.shade_delta.l = 0 - p.shade_delta.l;
+    }
+
+    p.shade.s += p.shade_delta.s;
+    if (p.shade.s > p.shade_max.s || p.shade.s < p.shade_min.s) {
+	p.shade_delta.s = 0 - p.shade_delta.s;
+    }
+}
 function populate_all_cells(p) {
     let count = 0;
 
@@ -122,7 +139,12 @@ function populate_all_cells(p) {
 }
 
 function award_collision(killed,killer) {
-    killer.size += Math.floor(killed.cells.length/2);
+    let awarded = killed.cells.length - 90;
+
+    if (awarded > 0) {
+	killer.size += awarded;
+    }
+
     killed.size = 1;
 }
 
@@ -202,6 +224,7 @@ function tick_game() {
 
     for (i=0 ; i<players.length; i++) {
 	update_viewport_scale(players[i]);
+	update_shade(players[i]);
     }
 
     populate_all_cells();
@@ -311,16 +334,16 @@ function check_collision(p) {
 
 function shift_player(p) {
 
+    if (p.cells.length >= p.size) {
+	let tail_position = p.cells.shift();
+	p.first_cell++;
+    }
+
     p.cells.push({x: p.position.x,
 		  y: p.position.y
 		 });
 
     p.last_cell++;
-
-    if (p.cells.length >= p.size) {
-	let tail_position = p.cells.shift();
-	p.first_cell++;
-    }
 
     
 
