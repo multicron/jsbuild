@@ -206,15 +206,41 @@ function init() {
     // The zoomed-in view for high scale factors
 
     zoomer = document.createElement( 'canvas' );
-    zoomer.id = "zoomer";
-    zoomer.width = globals.view_dim.width * globals.cellsize;
-    zoomer.height = globals.view_dim.height * globals.cellsize;
-    zoomer.style.width = '99%';
-    zoomer.style.height = '99%';
+				    //  "color": "white",
+				    //  opacity: "0.5",
+				    //  display: "inline-block",
+				    //  position: "fixed",
+				    //  top: 0,
+				    //  left: 0,
+				    //  width: "100%",
+				    //  height: "25%",
+				    //  margin: "auto",
+				    //  overflow: "auto"
+				    // });
+
+    zoomer.style.background-color = "green";
+    zoomer.style.color = "white";
+    zoomer.style.opacity = "0.5";
+    zoomer.style.display = "inline-block";
+    zoomer.style.position = "fixed";
+    zoomer.style.bottom = 0;
+    zoomer.style.left = 0;
+    zoomer.style.width = ;
+    zoomer.style.top = 0;
+    zoomer.style.width = '15%';
+    zoomer.style.height = '15%';
     zoomer.style.border = '1px solid black';
     zoomer.style.background = globals.bgcolor;
+
+    zoomer.id = "zoomer";
+    zoomer.width = globals.view_dim.width * globals.cellsize * 0.15;
+    zoomer.height = globals.view_dim.height * globals.cellsize;
     zoomer_ctx = zoomer.getContext( '2d', {alpha: false});
     zoomer_ctx.imageSmoothingEnabled = false;
+    display: "inline-block",
+    position: "fixed",
+
+    page.appendChild(zoomer);
 
     page.appendChild( viewport );
     page.appendChild(document.createElement('br'));
@@ -621,6 +647,43 @@ function update_viewport(p) {
     client_status.viewport_update = "Viewport update took " +(Date.now() - update_viewport_start) + "ms";
 
 //    logger("Viewport update took ",Date.now() - update_viewport_start, "ms");
+}
+
+function update_zoomer(p) {
+    let update_zoomer_start = Date.now();
+
+    let width = globals.world_dim.width;
+    let height = globals.world_dim.height;
+
+    let x = p.position.x - globals.view_dim.width/2;
+    let y = p.position.y - globals.view_dim.height/2;
+
+    zoomer_ctx.strokeStyle = 'rgb(0,0,0)';
+    zoomer_ctx.clearRect( 0, 0, zoomer_ctx.canvas.width, zoomer_ctx.canvas.height);
+
+    // Clip out the portion of the canvas corresponding to where the player is on the board;
+
+    let x_pixel = x * globals.cellsize;
+    let y_pixel = y * globals.cellsize;
+
+    let width_pixel = zoomer_ctx.canvas.width;
+    let height_pixel = zoomer_ctx.canvas.height;
+
+//	zoomer_ctx.drawImage(board,
+//			       x_crop,
+//			       y_crop,
+//			       width_crop,
+//			       height_crop,
+//			       x_dst,
+//			       y_dst,
+//			       width_dst,
+//			       height_dst);
+
+    zoomer_ctx.drawImage(board,x_pixel,y_pixel,width_pixel*p.scale,height_pixel*p.scale,0,0,width_pixel,height_pixel);
+
+    client_status.zoomer_update = "Zoomer update took " +(Date.now() - update_zoomer_start) + "ms";
+
+//    logger("Zoomer update took ",Date.now() - update_zoomer_start, "ms");
 }
 
 function update_map(p) {
