@@ -600,7 +600,9 @@ function animate() {
     }
 
     for (let i=0; i<players.length; i++) {
-	draw_name(players[i]);
+	if (players[i].size >= Math.floor(viewport_player.size * 0.25)) {
+	    draw_name(players[i]);
+	}
     }
 
     update_viewport(viewport_player);
@@ -756,8 +758,6 @@ function refresh_player(p) {
 
     draw_head(p);
 
-    draw_name(p);
-    
 }
 
 function cells_to_lines (cells) {
