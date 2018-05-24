@@ -3,7 +3,8 @@ module.exports = Object.freeze({
     port: 3000,
     grid: 0,
     bgcolor: "#000000",
-    headcolor: "#888888",
+    headcolor: "#FFFFFF",
+    edgecolor: "#FF0000",
     smallblocks: 0,
     cellsize: 10,
     delaycount: 0,
@@ -18,6 +19,10 @@ module.exports = Object.freeze({
     view_dim: {
 	width: 100,
 	height: 70,
+    },
+    zoomer_dim: {
+	width: 20,
+	height: 20,
     },
     map_dim: {
 	width: 50,

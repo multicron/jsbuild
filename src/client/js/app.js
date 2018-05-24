@@ -97,13 +97,14 @@ function init() {
 
     // A div for server status
 
-    div_server_status.style.cssText = html.CSS({"background-color": "green",
+    div_server_status.style.cssText = html.CSS({"background-color": "none",
 						"color": "white",
 						opacity: "0.5",
 						display: "inline-block",
 						position: "fixed",
 						top: 0,
 						left: 0,
+						"padding-left": "10px",
 						width: "100%",
 						height: "25%",
 						margin: "auto",
@@ -113,7 +114,6 @@ function init() {
     div_server_status.innerHTML = html.div(html.a("Server Status"));
 
 //    $(div_server_status).hide();
-    page.appendChild(div_server_status);
 
     // A div for the entering/exiting overlay
 
@@ -177,8 +177,23 @@ function init() {
     // A radar of the entire board, 1/16th the size of the viewport
 
     radar = document.createElement( 'canvas' );
-    radar.width = (globals.view_dim.width / 8) * globals.cellsize;
-    radar.height = (globals.view_dim.height / 8) * globals.cellsize;
+    radar.width = (globals.view_dim.width / 4) * globals.cellsize;
+    radar.height = (globals.view_dim.height / 4) * globals.cellsize;
+
+    radar.style.cssText = html.CSS({"background-color": "blue",
+				    "color": "white",
+				    opacity: "1.0",
+				    display: "inline-block",
+				    position: "fixed",
+				    top: 0,
+				    right: 0,
+				    width: radar.width,
+				    height: radar.height,
+				    margin: "auto",
+				    overflow: "auto",
+				    border: "1px solid white",
+				   });
+
     radar_ctx = radar.getContext( '2d' , {alpha: false});
     radar_ctx.imageSmoothingEnabled = true;
 
@@ -194,60 +209,57 @@ function init() {
 
     viewport = document.createElement( 'canvas' );
     viewport.id = "viewport";
+
     viewport.width = globals.view_dim.width * globals.cellsize;
     viewport.height = globals.view_dim.height * globals.cellsize;
-    viewport.style.width = '99%';
-    viewport.style.height = '99%';
-    viewport.style.border = '1px solid black';
-    viewport.style.background = globals.bgcolor;
+    viewport.style.cssText = html.CSS({"background-color": globals.edgecolor,
+				       "color": "white",
+				       opacity: "1.0",
+				       display: "inline-block",
+				       position: "fixed",
+				       top: 0,
+				       left: 0,
+				       width: "100%",
+//				       height: viewport.height + "px",
+				       margin: "auto",
+				       overflow: "auto",
+				       border: "1px solid white"
+				    });
+
+    viewport.style.background = globals.edgecolor;
     viewport_ctx = viewport.getContext( '2d', {alpha: false});
     viewport_ctx.imageSmoothingEnabled = false;
 
     // The zoomed-in view for high scale factors
 
     zoomer = document.createElement( 'canvas' );
-				    //  "color": "white",
-				    //  opacity: "0.5",
-				    //  display: "inline-block",
-				    //  position: "fixed",
-				    //  top: 0,
-				    //  left: 0,
-				    //  width: "100%",
-				    //  height: "25%",
-				    //  margin: "auto",
-				    //  overflow: "auto"
-				    // });
-
-    zoomer.style.background-color = "green";
-    zoomer.style.color = "white";
-    zoomer.style.opacity = "0.5";
-    zoomer.style.display = "inline-block";
-    zoomer.style.position = "fixed";
-    zoomer.style.bottom = 0;
-    zoomer.style.left = 0;
-    zoomer.style.width = ;
-    zoomer.style.top = 0;
-    zoomer.style.width = '15%';
-    zoomer.style.height = '15%';
-    zoomer.style.border = '1px solid black';
-    zoomer.style.background = globals.bgcolor;
-
     zoomer.id = "zoomer";
-    zoomer.width = globals.view_dim.width * globals.cellsize * 0.15;
-    zoomer.height = globals.view_dim.height * globals.cellsize;
+
+    zoomer.width = globals.zoomer_dim.width * globals.cellsize;
+    zoomer.height = globals.zoomer_dim.height * globals.cellsize;
+    zoomer.style.cssText = html.CSS({"background-color": globals.edgecolor,
+				     "color": "white",
+				     opacity: "1.0",
+				     display: "inline-block",
+				     position: "fixed",
+				     bottom: 0,
+				     left: 0,
+				     width: zoomer.width + "px",
+				     height: zoomer.height + "px",
+				     margin: "auto",
+				     overflow: "auto",
+				     border: "1px solid white"
+				    });
+
     zoomer_ctx = zoomer.getContext( '2d', {alpha: false});
     zoomer_ctx.imageSmoothingEnabled = false;
-    display: "inline-block",
-    position: "fixed",
 
+    page.appendChild(viewport);
     page.appendChild(zoomer);
+    page.appendChild(radar);
+    page.appendChild(div_server_status);
 
-    page.appendChild( viewport );
-    page.appendChild(document.createElement('br'));
-    page.appendChild( radar );
-    page.appendChild(document.createElement('br'));
 //    page.appendChild( map );
-//    page.appendChild(document.createElement('br'));
 
 
     // The board is not displayed (the map shows it shrunk down)
@@ -255,23 +267,8 @@ function init() {
 //    page.appendChild( board );
 //    page.appendChild(document.createElement('br'));
 
-    // Draw the grid, if enabled
 
-    board_ctx.strokeStyle = 'rgb(205,205,205)';
-
-    if (globals.grid) {
-	board_ctx.beginPath();
-	for (let x = 0; x <= globals.world_dim.width; x++) {
-	    board_ctx.moveTo(x*globals.cellsize,0);
-	    board_ctx.lineTo(x*globals.cellsize,globals.world_dim.height*globals.cellsize);
-	}
-	for (let y = 0; y <= globals.world_dim.height; y++) {
-	    board_ctx.moveTo(0,y*globals.cellsize);
-	    board_ctx.lineTo(globals.world_dim.width*globals.cellsize,y*globals.cellsize);
-	}
-	board_ctx.closePath();
-	board_ctx.stroke();
-    }
+    // Capture keyboard events
 
     $(window).keypress(log_event);
     $(window).keydown(key_down);
@@ -655,8 +652,8 @@ function update_zoomer(p) {
     let width = globals.world_dim.width;
     let height = globals.world_dim.height;
 
-    let x = p.position.x - globals.view_dim.width/2;
-    let y = p.position.y - globals.view_dim.height/2;
+    let x = p.position.x - globals.zoomer_dim.width/2;
+    let y = p.position.y - globals.zoomer_dim.height/2;
 
     zoomer_ctx.strokeStyle = 'rgb(0,0,0)';
     zoomer_ctx.clearRect( 0, 0, zoomer_ctx.canvas.width, zoomer_ctx.canvas.height);
@@ -669,21 +666,19 @@ function update_zoomer(p) {
     let width_pixel = zoomer_ctx.canvas.width;
     let height_pixel = zoomer_ctx.canvas.height;
 
-//	zoomer_ctx.drawImage(board,
-//			       x_crop,
-//			       y_crop,
-//			       width_crop,
-//			       height_crop,
-//			       x_dst,
-//			       y_dst,
-//			       width_dst,
-//			       height_dst);
 
-    zoomer_ctx.drawImage(board,x_pixel,y_pixel,width_pixel*p.scale,height_pixel*p.scale,0,0,width_pixel,height_pixel);
+    zoomer_ctx.drawImage(board,         // source canvas
+			 x_pixel,       // source rect cropping
+			 y_pixel,       // source rect cropping
+			 width_pixel,   // source rect cropping
+			 height_pixel,  // source rect cropping
+			 0,             // destination rect
+			 0,             // destination rect
+			 width_pixel,   // destination rect
+			 height_pixel   // destination rect
+			);
 
     client_status.zoomer_update = "Zoomer update took " +(Date.now() - update_zoomer_start) + "ms";
-
-//    logger("Zoomer update took ",Date.now() - update_zoomer_start, "ms");
 }
 
 function update_map(p) {
