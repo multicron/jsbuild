@@ -247,28 +247,31 @@ function tick_game() {
 }
 
 function update_clients() {
-    // Make a private copy of players
+    let updates = [];
 
-    let players_without_cells = JSON.parse(JSON.stringify(players));
+    for (let i=0; i<players.length; i++) {
+	let player = players[i];
+	let update = new PlayerUpdate();
 
-    // for (let i=0; i<players_without_cells.length; i++) {
-    // 	// Only send the last five cells in the "cells" array.
+	// Note that some of these items are object and must not be modified
+	// or they will change the data in the players array.
 
-    // 	let first_cell_to_send = players_without_cells[i].cells.length - 5;
+	update.id = player.id;
+	update.size = player.size;
+	update.position = player.position;
+	update.shade = player.shade;
+	update.scale = player.scale;
+	update.first_cell = player.first.cell; // Number of times "shift" has been called
+	update.last_cell = player.last_cell;   // Number of times "push" has been called
+	update.last_cells = player.cells.slice(-5); // Last N cells
 
-    // 	if (first_cell_to_send < 0) {
-    // 	    first_cell_to_send = 0;
-    // 	}
+	updates.push(update);
+    }
 
-    // 	players_without_cells[i].cells.splice(first_cell_to_send);
-    // }
-
-    for (let i=0; i<players_without_cells.length; i++) {
-    	let player_socket = sockets[players_without_cells[i].id];
+    for (let i=0; i<updates.length; i++) {
+    	let player_socket = sockets[updates[i].id];
     	if (player_socket) {
-    	    player_socket.emit('s_update_client',{players: players_without_cells});
-    	    logger("Sent s_update_clients to ",players_without_cells[i].id);
-	    logger(server_status);
+    	    player_socket.emit('s_update_client',{updates: updates});
     	}
     }
 

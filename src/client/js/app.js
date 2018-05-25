@@ -131,28 +131,17 @@ function init() {
 				  overflow: "auto"
 				 });
 
-    div_login.innerHTML = html.div(html.a("Link to Google",{href: "http://www.google.com/"},{target: "_top"}),
-			     html.a(["List","of","text"],{href: "http://www.yelp.com/"},{target: "_top"}),
-			     html.br({clear:null}),
-
-			     html.ul(["dogs","cats","birds","hampsters"].map(x => html.li(x + " are the best"))),
-			     html.ul(["dogs","cats","birds","hampsters"].reduce((acc,val) => acc + html.li(val + " are the best"),"")),
-			     html.table(html.tr(html.td("Hello"),html.td("There"),html.td("How"))),
-			     html.a("Link to Mauicomputing",{href: "http://www.google.com/"}),
-			     html.br(),
-			     html.hr({width:"90%"}),
-			     html.textarea("Here is some editable text"),
-			     html.form({action: "index.html",method: "get"},
-				       html.select({id:"demo1"},[0,1,2,3,4,5,6,7,8,9].map(x => html.option(x*10,{value: x},x==5 ? {selected: null} : {}))),html.br(),
-				       html.select({id:"demo2"},[...Array(20).keys()].map(x => html.option(x,{value: x},x==15 ? {selected: null} : {}))),html.br(),
-				       "Bluby:",html.input({type: "text", name: "bluby"}),
-				       "Loves:",html.input({type: "text", name: "loves"}),
-				       "You:",html.input({type: "text", name: "you"}),
-				       html.input({type: "submit", name: "process"}))
-			    );
+    div_login.innerHTML = html.form({action: "index.html",method: "get"},
+				    "What is your worm's name?",
+				    html.br(),
+				    html.input({type: "text", 
+						name: "worm_name", 
+						id: "worm_name"}),
+				    html.input({type: "submit", 
+						name: "Play", 
+						id: "play_button"}));
 
     $(div_login).hide();
-    page.appendChild(div_login);
 
     // Canvases
 
@@ -171,7 +160,7 @@ function init() {
     map = document.createElement( 'canvas' );
     map.width = globals.view_dim.width * globals.cellsize;
     map.height = globals.view_dim.height * globals.cellsize;
-    map_ctx = map.getContext( '2d' , {alpha: false});
+    map_ctx = map.getContext( '2d' , {alpha: globals.context_alpha});
     map_ctx.imageSmoothingEnabled = false;
 
     // A radar of the entire board, 1/16th the size of the viewport
@@ -194,7 +183,7 @@ function init() {
 				    border: "1px solid white",
 				   });
 
-    radar_ctx = radar.getContext( '2d' , {alpha: false});
+    radar_ctx = radar.getContext( '2d' , {alpha: globals.context_alpha});
     radar_ctx.imageSmoothingEnabled = true;
 
     // The entire playing field
@@ -202,7 +191,7 @@ function init() {
     board = document.createElement( 'canvas' );
     board.width = globals.world_dim.width * globals.cellsize;
     board.height = globals.world_dim.height * globals.cellsize;
-    board_ctx = board.getContext( '2d', {alpha: false});
+    board_ctx = board.getContext( '2d', {alpha: globals.context_alpha});
     board_ctx.strokeRect(0,0,board_ctx.canvas.width,board_ctx.canvas.height);
 
     // The current player's view into the board
@@ -220,14 +209,11 @@ function init() {
 				       top: 0,
 				       left: 0,
 				       width: "100%",
-//				       height: viewport.height + "px",
 				       margin: "auto",
 				       overflow: "auto",
-				       border: "1px solid white"
 				    });
 
-    viewport.style.background = globals.edgecolor;
-    viewport_ctx = viewport.getContext( '2d', {alpha: false});
+    viewport_ctx = viewport.getContext( '2d', {alpha: globals.context_alpha});
     viewport_ctx.imageSmoothingEnabled = false;
 
     // The zoomed-in view for high scale factors
@@ -251,13 +237,14 @@ function init() {
 				     border: "1px solid white"
 				    });
 
-    zoomer_ctx = zoomer.getContext( '2d', {alpha: false});
+    zoomer_ctx = zoomer.getContext( '2d', {alpha: globals.context_alpha});
     zoomer_ctx.imageSmoothingEnabled = false;
 
     page.appendChild(viewport);
     page.appendChild(zoomer);
     page.appendChild(radar);
     page.appendChild(div_server_status);
+    page.appendChild(div_login);
 
 //    page.appendChild( map );
 
@@ -376,7 +363,7 @@ function mouse_pos_to_dir(passed_point) {
     return pt;
 }
 
-function update_player_cells (player,player_update) {
+function update_player_cells (player,update) {
     logger("Update_player_cells for Player "+player.id);
 
     if (player) {
@@ -384,51 +371,50 @@ function update_player_cells (player,player_update) {
 
 	// Catch the tail up to the server
 
-	logger("player.first_cell " + player.first_cell + ", player_update.first_cell " + player_update.first_cell);
-	logger("player.last_cell " + player.last_cell + ", player_update.last_cell " + player_update.last_cell);
+	logger("player.first_cell " + player.first_cell + ", update.first_cell " + update.first_cell);
+	logger("player.last_cell " + player.last_cell + ", update.last_cell " + update.last_cell);
 
-	while (player.first_cell < player_update.first_cell) {
+	while (player.first_cell < update.first_cell) {
 	    logger("Shifting player "+player.first_cell);
 	    player.cells.shift();
 	    player.first_cell++;
 	}
 	
-	if (player.last_cell < player_update.last_cell) {
-	    let num_to_add = player_update.last_cell - player.last_cell;
+	if (player.last_cell < update.last_cell) {
+	    let num_to_add = update.last_cell - player.last_cell;
+	    let first_cell_to_add = update.last_cells.length - num_to_add;
 	    
-	    let first_cell_to_add = player_update.cells.length - num_to_add;
+	    logger("Adding to player "+num_to_add+" first cell "+first_cell_to_add + " length " + update.last_cells.length);
 	    
-	    logger("Adding to player "+num_to_add+" first cell "+first_cell_to_add + " length " + player_update.cells.length);
-	    
-	    for (let x = first_cell_to_add; x < player_update.cells.length ; x++) {
-		logger("Adding " + player_update.cells[x] + "to player");
-		player.cells.push(player_update.cells[x]);
+	    for (let x = first_cell_to_add; x < update.last_cells.length ; x++) {
+		logger("Adding " + update.last_cells[x] + "to player");
+		player.cells.push(update.last_cells[x]);
 		
 	    }
-	}
+
+	player.last_cell = update.last_cell;
 	    
-	return old_cells;
+	}
     }
 }
 
 function update_players (data) {
-    for (let i=0; i<data.players.length; i++) {
+    let updates = data.updates;
 
-	let player = get_player_by_id(data.players[i].id);
+    for (let i=0; i<updates.length; i++) {
+	let update = updates[i];
+
+	// If we don't have this player yet, we can't update it
+
+	let player = get_player_by_id(update.id);
 
 	if (player === undefined) {
-	    logger("Adding new player for "+data.players[i].id);
-	    players.push(data.players[i]);
+	    logger("Can't update this player: "+data.updates[i]);
 	}
 	else {
-	    let new_cells = update_player_cells(player,data.players[i]);
-
-	    logger("New Cells " + JSON.stringify(new_cells));
-		
-	    data.players[i].cells = new_cells;
+	    update_player_cells(player,update);
 	    }
 	}
-    players = data.players;
 }
 
 
