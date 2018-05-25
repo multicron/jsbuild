@@ -12,6 +12,7 @@ module.exports = {
 	right: 39,
 	down: 40,
 	r: 82,
+	z: 90,
 	space: 32,
 	shift: 16,
 	control: 17,

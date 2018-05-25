@@ -231,6 +231,8 @@ function init() {
 				     display: "inline-block",
 				     position: "fixed",
 				     bottom: 0,
+				     top: 0,
+				     right: 0,
 				     left: 0,
 				     width: zoomer.width + "px",
 				     height: zoomer.height + "px",
@@ -241,6 +243,8 @@ function init() {
 
     zoomer_ctx = zoomer.getContext( '2d', {alpha: globals.context_alpha});
     zoomer_ctx.imageSmoothingEnabled = false;
+
+    $(zoomer).hide();
 
     page.appendChild(viewport);
     page.appendChild(zoomer);
@@ -261,7 +265,7 @@ function init() {
 
     $(window).keypress(log_event);
     $(window).keydown(key_down);
-    $(window).keyup(log_event);
+    $(window).keyup(key_up);
     $(window).mouseout(log_event);
     $(window).mousemove(log_event);
 
@@ -326,6 +330,21 @@ function key_down(event) {
 	if (event.which === constant.keycode.r) {
 	    socket.emit('c_request_world_update');
 	}
+	else if (event.which === constant.keycode.shift) {
+	    $(zoomer).show();
+	}
+	else if (event.which === constant.keycode.space) {
+	    socket.emit('c_change_dash', 1);
+	}
+    }
+}
+
+function key_up(event) {
+    if (event.which === constant.keycode.shift) {
+	$(zoomer).hide();
+    }
+    else if (event.which === constant.keycode.space) {
+	socket.emit('c_change_dash', 0);
     }
 }
 

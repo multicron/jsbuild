@@ -78,11 +78,14 @@ let last_in_bytes = 0;
 let last_in_packets = 0;
 let last_network_monitor = 0;
 
+let dash_skip = true;
+
 function add_player() {
     let player = new Player();
     player.name = player_num++;
     player.id = "R"+robot_counter++;
     player.is_robot = true;
+    player.dash = (Math.random() > 0.6) ? 1 : 0;
     players.push(player);
 
     return player;
@@ -216,6 +219,9 @@ function tick_game() {
     for (i=0; i<players.length; i++) {
 	if (players[i].alive) {
 	    one_step(players[i]);
+	    if (players[i].dash) {
+		one_step(players[i]);
+	    }
 	}
     }
 
@@ -397,6 +403,12 @@ function move_player(p) {
 
     p.position.x = new_pos.x;
     p.position.y = new_pos.y;
+
+    // Fill in the all_cells array so that we can collide with things
+
+    if (all_cells[p.position] && !all_cells[p.position.x][p.position.y]) {
+	all_cells[p.position.x][p.position.y] = p;
+    }
 }
 
 function check_edge_death(p) {
@@ -482,6 +494,10 @@ io.on('connect', function (socket) {
 	}
     });
 
+    socket.on('c_change_dash', function (dash) {
+	connected_player.dash = dash;
+    });
+
     socket.on('c_request_player_update', function () {
         // logger('c_request_update_clients from ' + connected_player.id);
 	// socket.emit('s_update_clients',players);
@@ -545,7 +561,7 @@ function init_game() {
 
 init_game();
 
-setInterval(tick_game,100);
+setInterval(tick_game,80);
 setInterval(monitor_network,1000);
 setInterval(send_server_status,1000);
 //setInterval(log_status,5000);
