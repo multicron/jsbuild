@@ -13,6 +13,7 @@ const constant = require('lib/constant.js');
 const Player = require('lib/Player.js');
 const PlayerUpdate = require('lib/PlayerUpdate.js');
 const Phyper = require("lib/Phyper.js");
+const boynames = require('lib/boynames.js');
 
 let logger = function(...args) {
     debug(...args);
@@ -78,11 +79,9 @@ let last_in_bytes = 0;
 let last_in_packets = 0;
 let last_network_monitor = 0;
 
-let dash_skip = true;
-
 function add_player() {
     let player = new Player();
-    player.name = player_num++;
+    player.name = boynames[Math.floor(Math.random()*boynames.length)];
     player.id = "R"+robot_counter++;
     player.is_robot = true;
     player.dash = (Math.random() > 0.6) ? 1 : 0;
@@ -221,6 +220,9 @@ function tick_game() {
 	    one_step(players[i]);
 	    if (players[i].dash) {
 		one_step(players[i]);
+		if (players[i].is_robot) {
+		    players[i].dash--;
+		}
 	    }
 	}
     }
@@ -251,6 +253,7 @@ function update_clients() {
 	update.id = player.id;
 	update.alive = player.alive;
 	update.size = player.size;
+	update.dash = player.dash;
 	update.position = player.position;
 	update.shade = player.shade;
 	update.scale = player.scale;
@@ -342,21 +345,28 @@ function turn_robot(p) {
 
     let new_pos = predict_player_position(p,2);
 
+    let new_dir = p.dir;
+
     let c = get_collision_object(new_pos.x,new_pos.y);
 
     let force_turn = (c===false || (c && c!==p));
 
     if (force_turn && rnd < 0.5) {
-	p.dir = turn_left(p.dir);
+	new_dir = turn_left(p.dir);
     }
     else if (force_turn && rnd >= 0.5) {
-	p.dir = turn_right(p.dir);
+	new_dir = turn_right(p.dir);
     }
     else if (rnd < 0.05) {
-	p.dir = turn_left(p.dir);
+	new_dir = turn_left(p.dir);
     }
     else if (rnd < 0.12) {
-	p.dir = turn_right(p.dir);
+	new_dir = turn_right(p.dir);
+    }
+
+    if (p.dir !== new_dir) {
+	p.dir = new_dir;
+	p.dash = 5;
     }
 }
 
@@ -442,14 +452,14 @@ io.on('connect', function (socket) {
     let currentPlayer; // Just for legacy code
 
     let connected_player = new Player();
-    connected_player.name = player_num++;
+    connected_player.name = "Player " + (player_num++);
     connected_player.id = socket.id;
     connected_player.is_robot = false;
     sockets[connected_player.id] = socket;
     players.push(connected_player);
     logger('Player ' + connected_player.id + ' connecting!');
 
-    socket.emit('s_update_world',{players: players});
+    socket.emit('s_update_world',players);
 
     immortal_socket = socket;
 
@@ -506,7 +516,7 @@ io.on('connect', function (socket) {
 
     socket.on('c_request_world_update', function () {
         logger('c_request_world_update from ' + connected_player.id);
-	socket.emit('s_update_world',{players: players});
+	socket.emit('s_update_world',players);
     });
 
     socket.on('pingcheck', function () {

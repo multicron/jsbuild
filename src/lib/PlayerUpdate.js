@@ -7,6 +7,7 @@ module.exports = function PlayerUpdate() {
     this.id = undefined;
     this.alive = undefined;
     this.size = undefined;
+    this.dash = 0;
     this.position = {
 	x: 0,
 	y: 0,

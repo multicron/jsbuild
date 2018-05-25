@@ -53,6 +53,7 @@ let map_ctx;
 let radar;
 let radar_ctx;
 let div_server_status = document.createElement('div');
+let div_leaderboard = document.createElement('div');
 let div_login = document.createElement('div');
 let players = [];
 let server_status = {};
@@ -111,9 +112,32 @@ function init() {
 						overflow: "auto"
 					       });
 
-    div_server_status.innerHTML = html.div(html.a("Server Status"));
+    div_server_status.innerHTML = html.div("Server Status");
 
 //    $(div_server_status).hide();
+
+    div_leaderboard.style.cssText = html.CSS({"background-color": "none",
+					      "color": "white",
+					      opacity: "1",
+//					      display: "inline-block",
+					      display: "flex",          
+					      "font-family": "arial",
+					      "flex-direction": "column", 
+//					      "justify-content": "center",
+					      "align-items": "center",
+					      position: "fixed",
+					      top: 0,
+					      right: 0,
+					      "padding-right": "10px",
+					      width: "20%",
+					      height: "30%",
+					      margin: "auto",
+					      overflow: "auto",
+					      "overflow-x": "hidden",
+					      "overflow-y": "hidden",
+					     });
+
+    div_leaderboard.innerHTML = html.div("Leaderboard");
 
     // A div for the entering/exiting overlay
 
@@ -174,7 +198,7 @@ function init() {
 				    opacity: "1.0",
 				    display: "inline-block",
 				    position: "fixed",
-				    top: 0,
+				    bottom: 0,
 				    right: 0,
 				    width: (radar.width) + "px",
 				    height: (radar.height) + "px",
@@ -250,6 +274,7 @@ function init() {
     page.appendChild(zoomer);
     page.appendChild(radar);
     page.appendChild(div_server_status);
+    page.appendChild(div_leaderboard);
     page.appendChild(div_login);
 
 //    page.appendChild( map );
@@ -278,7 +303,7 @@ function update_status() {
     let status = "";
 
     if (viewport_player) {
-	client_status.scale = "Scale: " + viewport_player.scale.toPrecision(2);
+	client_status.scale = "Scale: " + viewport_player.scale.toPrecision(2) + " Dash: " + viewport_player.dash;
     }
     client_status.num_players = "Number Players (client): " + players.length;
 
@@ -437,6 +462,7 @@ function update_players (updates) {
 	}
 	else {
 	    player.size = update.size;
+	    player.dash = update.dash;
 	    player.alive = update.alive;
 	    player.position = update.position;
 	    player.shade = update.shade;
@@ -460,24 +486,6 @@ function remove_dead_players() {
 
 
 function setupSocket(socket) {
-    socket.on('pongcheck', function () {
-    });
-
-    socket.on('connect_failed', function () {
-        socket.close();
-        globals.disconnected = true;
-    });
-
-    socket.on('disconnect', function () {
-        socket.close();
-        globals.disconnected = true;
-    });
-
-    socket.on("server_setup", function() {
-	logger("Got server_setup");
-	socket.emit("client_setup");
-    });
-
     socket.on('s_server_status', function (status) {
 	server_status = status;
     });
@@ -486,9 +494,9 @@ function setupSocket(socket) {
 	update_players(updates);
     });
 
-    socket.on('s_update_world', function (data) {
+    socket.on('s_update_world', function (players_from_server) {
 	logger("Got world update");
-	players = data.players;
+	players = players_from_server;
     });
 
     socket.on('s_add_player', function (player) {
@@ -564,7 +572,6 @@ function request_timestamp() {
 
 function animate() {
     window.requestAnimFrame( animate );
-    //    socket.emit('c_request_player_update');
 
     let animate_start = Date.now();
 
@@ -595,6 +602,8 @@ function animate() {
 	update_map(viewport_player);
 
 	update_radar(viewport_player);
+
+	update_leaderboard(viewport_player);
     }
 
     for (let i=0; i<players.length; i++) {
@@ -611,6 +620,52 @@ function animate() {
 
     
 }
+
+function update_leaderboard(p) {
+    let leaders = [];
+
+    for (let i=0; i<players.length; i++) {
+	leaders[i] = {name: players[i].name,
+		      id: players[i].id,
+		      shade: players[i].shade_min,
+		      size: players[i].size,
+		      cellcount: players[i].cells.length
+		      };
+    }
+
+    leaders.sort(function (a,b) {
+	return b.size - a.size;
+    });
+
+    if (leaders.length > 8) {
+	leaders.length = 8;
+    }
+
+    if (leaders.filter(function (a) {return a.id===p.id;}).length <= 0) {
+	leaders[8] = {name: p.name,
+		      id: p.id,
+		      size: p.size,
+		      cellcount: p.cells.length,
+		      shade: {h: 50,l: 100,s:100},
+		      };
+    }
+    
+    div_leaderboard.innerHTML = html.div("Leaderboard") + html.table(leaders.map(function (p){
+	let color = 'hsl('+p.shade.h+','+p.shade.l+'%,'+p.shade.s+'%)';
+	return html.tr(
+	    html.td({style: html.CSS(
+		{color: color, 
+		 width: "90%"}
+	    )},p.name),
+	    html.td({align: "right"},p.cellcount),
+	    html.td("/"),
+	    html.td({align: "left"},p.size));
+    }));
+
+
+}
+
+
 
 function update_viewport(p) {
     let update_viewport_start = Date.now();
@@ -746,9 +801,10 @@ function refresh_player(p) {
 	    //	adjust_shade(shade,shade_delta,{h:0,l:50,s:50});
 	}
     }
-
-    for (let j=0; j<p.lines.length; j++) {
-	draw_line(p.lines[j],shade);
+    else {
+	for (let j=0; j<p.lines.length; j++) {
+	    draw_line(p.lines[j],shade);
+	}
     }
     
     
@@ -841,10 +897,15 @@ function draw_cell(cell,shade) {
 }
 
 function draw_head(p) {
-    let color = 'hsl('+p.shade.h+','+p.shade.l+'%,'+p.shade.s+'%)';
     let cell = p.position;
 
-    board_ctx.fillStyle = globals.headcolor;
+    let color = globals.headcolor;
+
+    if (p.dash) {
+	color = globals.dashcolor;
+    }
+
+    board_ctx.fillStyle = color;
 
     if (globals.smallblocks) {
 	board_ctx.fillRect((cell.x*globals.cellsize)+1,
@@ -870,14 +931,14 @@ function draw_name(p) {
 
     board_ctx.font = Math.floor(12*scale) + 'px Verdana';
 
-    let name = "#" + p.name;
+    let name = p.name;
 
-    if (p.cells.length === p.size) {
-	name += "(" + p.size + ")";
-	}
-    else {
-	name += "(" + p.cells.length + "/" + p.size + ")";
-    }
+    // if (p.cells.length === p.size) {
+    // 	name += "(" + p.size + ")";
+    // 	}
+    // else {
+    // 	name += "(" + p.cells.length + "/" + p.size + ")";
+    // }
 	
     board_ctx.fillText(name,
 		       (p.position.x+1)*globals.cellsize + 1,
