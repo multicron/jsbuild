@@ -11,6 +11,7 @@ const fs = require('fs');
 const globals = require('lib/globals.js');
 const constant = require('lib/constant.js');
 const Player = require('lib/Player.js');
+const PlayerUpdate = require('lib/PlayerUpdate.js');
 const Phyper = require("lib/Phyper.js");
 
 let logger = function(...args) {
@@ -83,25 +84,8 @@ function add_player() {
     player.id = "R"+robot_counter++;
     player.is_robot = true;
     players.push(player);
-}
 
-function init_game() {
-
-    logger("init_game");
-    // Initialize "all cells" array for collision detection
-
-    for (let i=0;i<globals.world_dim.width;i++) {
-	all_cells[i]=[];
-	for (let j=0;j<globals.world_dim.height;j++) {
-	    all_cells[i][j]=0;
-	}
-    }
-
-    // Add initial players to the players[] array
-
-    for (let x=0;x<globals.startplayers;x++) {
-	add_player();
-    }
+    return player;
 }
 
 function update_viewport_scale(p) {
@@ -240,9 +224,11 @@ function tick_game() {
     remove_dead_players();
 
     while (players.length < globals.minplayers) {
-	add_player();
+	let player = add_player();
+	logger("Sending s_add_player");
+	io.sockets.emit('s_add_player',player);
     }
-
+    server_status.num_players = `Number Players (server): ${players.length}`;
     server_status.tick_game = `tick_game took ${Date.now() - tick_game_start} ms.`;
 }
 
@@ -253,15 +239,16 @@ function update_clients() {
 	let player = players[i];
 	let update = new PlayerUpdate();
 
-	// Note that some of these items are object and must not be modified
+	// Note that some of these items are objects and must not be modified
 	// or they will change the data in the players array.
 
 	update.id = player.id;
+	update.alive = player.alive;
 	update.size = player.size;
 	update.position = player.position;
 	update.shade = player.shade;
 	update.scale = player.scale;
-	update.first_cell = player.first.cell; // Number of times "shift" has been called
+	update.first_cell = player.first_cell; // Number of times "shift" has been called
 	update.last_cell = player.last_cell;   // Number of times "push" has been called
 	update.last_cells = player.cells.slice(-5); // Last N cells
 
@@ -271,7 +258,7 @@ function update_clients() {
     for (let i=0; i<updates.length; i++) {
     	let player_socket = sockets[updates[i].id];
     	if (player_socket) {
-    	    player_socket.emit('s_update_client',{updates: updates});
+    	    player_socket.emit('s_update_client',updates);
     	}
     }
 
@@ -435,6 +422,12 @@ function clear_all_cells() {
     }
 }
 
+function log_players() {
+    players.forEach( function (player) {
+	logger("Player: ",player.id,player.alive,player.size);
+    });
+}
+
 io.on('connect', function (socket) {
     logger('A user connected!', socket.handshake);
 
@@ -451,6 +444,8 @@ io.on('connect', function (socket) {
     sockets[connected_player.id] = socket;
     players.push(connected_player);
     logger('Player ' + connected_player.id + ' connecting!');
+
+    socket.emit('s_update_world',{players: players});
 
     immortal_socket = socket;
 
@@ -527,19 +522,33 @@ io.on('connect', function (socket) {
     });
 
     // Heartbeat function, update everytime.  What is target for?
-    socket.on('0', function(target) {
-	logger("socket.on 0");
-        currentPlayer.lastHeartbeat = new Date().getTime();
-        if (target.x !== currentPlayer.x || target.y !== currentPlayer.y) {
-            currentPlayer.target = target;
-        }
-    });
+    // socket.on('0', function(target) {
+    // 	logger("socket.on 0");
+    //     currentPlayer.lastHeartbeat = new Date().getTime();
+    //     if (target.x !== currentPlayer.x || target.y !== currentPlayer.y) {
+    //         currentPlayer.target = target;
+    //     }
+    // });
+
 });
 
-function log_players() {
-    players.forEach( function (player) {
-	logger("Player: ",player.id,player.alive,player.size);
-    });
+function init_game() {
+
+    logger("init_game");
+    // Initialize "all cells" array for collision detection
+
+    for (let i=0;i<globals.world_dim.width;i++) {
+	all_cells[i]=[];
+	for (let j=0;j<globals.world_dim.height;j++) {
+	    all_cells[i][j]=0;
+	}
+    }
+
+    // Add initial players to the players[] array
+
+    for (let x=0;x<globals.startplayers;x++) {
+	add_player();
+    }
 }
 
 init_game();

@@ -5,6 +5,7 @@ const globals = require('./globals.js');
 
 module.exports = function PlayerUpdate() {
     this.id = undefined;
+    this.alive = undefined;
     this.size = undefined;
     this.position = {
 	x: 0,

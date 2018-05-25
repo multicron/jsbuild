@@ -274,6 +274,7 @@ function update_status() {
     if (viewport_player) {
 	client_status.scale = viewport_player.scale;
     }
+    client_status.num_players = "Number Players (client): " + players.length;
 
     for (let category in server_status) {
 	status += server_status[category] + "<br>";
@@ -313,15 +314,16 @@ function keycode_to_dir(keycode) {
 
 function key_down(event) {
 
-    logger("Keydown");
-    logger("Key", event.which);
     let new_dir = keycode_to_dir(event.which);
-    logger("Direction", new_dir);
-
     if (new_dir) {
 	event.preventDefault();
 	logger("Sending direction change to",new_dir);
 	socket.emit('c_change_direction',new_dir);
+    }
+    else {
+	if (event.which === constant.keycode.r) {
+	    socket.emit('c_request_world_update');
+	}
     }
 }
 
@@ -398,9 +400,7 @@ function update_player_cells (player,update) {
     }
 }
 
-function update_players (data) {
-    let updates = data.updates;
-
+function update_players (updates) {
     for (let i=0; i<updates.length; i++) {
 	let update = updates[i];
 
@@ -409,12 +409,29 @@ function update_players (data) {
 	let player = get_player_by_id(update.id);
 
 	if (player === undefined) {
-	    logger("Can't update this player: "+data.updates[i]);
+	    logger("Can't update this player: "+updates[i]);
 	}
 	else {
+	    player.size = update.size;
+	    player.alive = update.alive;
+	    player.position = update.position;
+	    player.shade = update.shade;
+	    player.scale = update.scale;
+	    
 	    update_player_cells(player,update);
 	    }
 	}
+    
+    remove_dead_players();
+}
+
+function remove_dead_players() {
+    let i = players.length;
+    while (i--) {
+	if (!players[i].alive) {
+	    players.splice(i, 1);
+	} 
+    }
 }
 
 
@@ -437,51 +454,22 @@ function setupSocket(socket) {
 	socket.emit("client_setup");
     });
 
-    socket.on('welcome', function (data) {
-	logger("Got welcome "+data);
-        socket.emit('gotit');
-    });
-
-    socket.on('gameSetup', function(data) {
-	logger("Got gamesetup");
-    });
-
-    socket.on('playerDied', function (data) {
-	logger("Got playerDied");
-    });
-
-    socket.on('playerDisconnect', function (data) {
-    });
-
-    socket.on('playerJoin', function (data) {
-    });
-
-    socket.on('leaderboard', function (data) {
-//        leaderboard = data.leaderboard;
-    });
-
-    socket.on('serverMSG', function (data) {
-    });
-
     socket.on('s_server_status', function (data) {
 	server_status = data.server_status;
     });
-
-
-    socket.on('s_update_client', function (data) {
-//	logger("Got s_update_client");
-
-	players = data.players;
-
-
-//	update_players(data);
-
+    
+    socket.on('s_update_client', function (updates) {
+	update_players(updates);
     });
-
 
     socket.on('s_update_world', function (data) {
 	logger("Got world update");
 	players = data.players;
+    });
+
+    socket.on('s_add_player', function (player) {
+	logger("Got add player");
+	players.push(player);
     });
 
     socket.on('player_died', function () {
@@ -586,9 +574,9 @@ function animate() {
     }
 
     for (let i=0; i<players.length; i++) {
-	if (players[i].size >= Math.floor(viewport_player.size * 0.25)) {
+//	if (players[i].size >= Math.floor(viewport_player.size * 0.25)) {
 	    draw_name(players[i]);
-	}
+//	}
     }
 
     update_viewport(viewport_player);
@@ -748,13 +736,13 @@ function refresh_player(p) {
 
 function cells_to_lines (cells) {
 
-    if (cells.length <= 0) return;
-
     let start_x,start_y;
     let end_x,end_y;
     let start, end;
     let lines = [];
     let line;
+
+    if (cells.length <= 0) return lines;
 
     function push_line(cell) {
 	lines.push({start:{x:start_x,y:start_y},end:{x:end_x,y:end_y}});
