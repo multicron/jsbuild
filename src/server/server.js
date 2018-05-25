@@ -250,7 +250,7 @@ function update_clients() {
 	update.scale = player.scale;
 	update.first_cell = player.first_cell; // Number of times "shift" has been called
 	update.last_cell = player.last_cell;   // Number of times "push" has been called
-	update.last_cells = player.cells.slice(-5); // Last N cells
+	update.last_cells = player.cells.slice(-3); // Last N cells
 
 	updates.push(update);
     }
@@ -265,16 +265,8 @@ function update_clients() {
 }
 
 function send_server_status() {
-    for (let i=0; i<players.length; i++) {
-	let p = players[i];
-
-    	let player_socket = sockets[p.id];
-    	if (player_socket) {
-    	    player_socket.emit('s_server_status',{server_status: server_status});
-    	    logger("Sent s_server_status to ",p.id);
-	    logger(server_status);
-    	}
-    }
+    logger(server_status);
+    io.sockets.emit('s_server_status',server_status);
 }
 
 function one_step(p) {

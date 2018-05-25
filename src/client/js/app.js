@@ -201,17 +201,19 @@ function init() {
 
     viewport.width = globals.view_dim.width * globals.cellsize;
     viewport.height = globals.view_dim.height * globals.cellsize;
-    viewport.style.cssText = html.CSS({"background-color": globals.edgecolor,
-				       "color": "white",
-				       opacity: "1.0",
-				       display: "inline-block",
-				       position: "fixed",
-				       top: 0,
-				       left: 0,
-				       width: "100%",
-				       margin: "auto",
-				       overflow: "auto",
-				    });
+    viewport.style.cssText = html.CSS({
+//	"background-color": globals.edgecolor,
+	background: "radial-gradient(red,black)",
+	"color": "white",
+	opacity: "1.0",
+	display: "inline-block",
+	position: "fixed",
+	top: 0,
+	left: 0,
+	width: "100%",
+	margin: "auto",
+	overflow: "auto",
+    });
 
     viewport_ctx = viewport.getContext( '2d', {alpha: globals.context_alpha});
     viewport_ctx.imageSmoothingEnabled = false;
@@ -272,7 +274,7 @@ function update_status() {
     let status = "";
 
     if (viewport_player) {
-	client_status.scale = viewport_player.scale;
+	client_status.scale = "Scale: " + viewport_player.scale.toPrecision(2);
     }
     client_status.num_players = "Number Players (client): " + players.length;
 
@@ -385,17 +387,20 @@ function update_player_cells (player,update) {
 	if (player.last_cell < update.last_cell) {
 	    let num_to_add = update.last_cell - player.last_cell;
 	    let first_cell_to_add = update.last_cells.length - num_to_add;
-	    
-	    logger("Adding to player "+num_to_add+" first cell "+first_cell_to_add + " length " + update.last_cells.length);
-	    
-	    for (let x = first_cell_to_add; x < update.last_cells.length ; x++) {
-		logger("Adding " + update.last_cells[x] + "to player");
-		player.cells.push(update.last_cells[x]);
-		
-	    }
 
-	player.last_cell = update.last_cell;
-	    
+	    if (num_to_add > update.last_cells.length) {
+		logger("Too far behind-- requesting world update");
+		socket.emit('c_request_world_update');
+	    }
+	    else {
+		logger("Adding to player "+num_to_add+" first cell "+first_cell_to_add + " length " + update.last_cells.length);
+		
+		for (let x = first_cell_to_add; x < update.last_cells.length ; x++) {
+		    player.cells.push(update.last_cells[x]);
+		}
+		
+		player.last_cell = update.last_cell;
+	    }
 	}
     }
 }
@@ -454,8 +459,8 @@ function setupSocket(socket) {
 	socket.emit("client_setup");
     });
 
-    socket.on('s_server_status', function (data) {
-	server_status = data.server_status;
+    socket.on('s_server_status', function (status) {
+	server_status = status;
     });
     
     socket.on('s_update_client', function (updates) {
@@ -840,7 +845,9 @@ function draw_name(p) {
     let color = 'hsl('+p.shade.h+','+p.shade.l+'%,'+p.shade.s+'%)';
     board_ctx.fillStyle = color;
 
-    let scale = viewport_player ? viewport_player.scale : 1.0;
+//    let scale = viewport_player ? viewport_player.scale : 1.0;
+
+    let scale = p.scale;
 
     board_ctx.font = Math.floor(12*scale) + 'px Verdana';
 
