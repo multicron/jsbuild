@@ -12,6 +12,7 @@ var obfuscator = require('gulp-javascript-obfuscator');
 var debug = require('gulp-debug');
 var pump = require('pump');
 var env = require('gulp-env');
+var path = require('path');
 
 gulp.task('build', ['build-client', 'move-client', 'build-server', 'test']);
 
@@ -33,8 +34,8 @@ gulp.task('lint', function () {
     .pipe(jshint.reporter('fail'));
 });
 
-gulp.task('build-client', ['lint'], function (cb) {
-    pump([gulp.src(['src/client/js/app.js']),
+gulp.task('babel', ['lint'], function (cb) {
+    pump([gulp.src(['src/**/*.js']),
 	  babel({
 	      babelrc: false,
 	      compact: false,
@@ -42,9 +43,22 @@ gulp.task('build-client', ['lint'], function (cb) {
 	  	  ['es2015']
 	      ],
 	  }),
+	  debug({title:'babel'}),
+	  gulp.dest('babel'),
+	  ],cb);
+});
+
+gulp.task('build-client', ['lint','babel'], function (cb) {
+    pump([gulp.src(['babel/client/js/app.js']),
 	  webpack({
 	      output: {
 	  	  filename: "app.js"
+	      },
+	      resolve: {
+		  modules: [
+		      path.resolve('./babel/lib'),
+		      path.resolve('./node_modules')
+		  ]
 	      }
 	  }),
 	  // obfuscator({
@@ -61,7 +75,7 @@ gulp.task('build-client', ['lint'], function (cb) {
 	  //     selfDefending: true,
 	  //     stringArray: true,
 	  //     stringArrayEncoding: true,
-	  //     stringArrayThreshold: 0.75,
+	  //     stringArrayThreshold: 1.00,
 	  //     unicodeEscapeSequence: false,
 	  // }),
 	  debug({title:'build-client'}),

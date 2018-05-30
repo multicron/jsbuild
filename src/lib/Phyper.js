@@ -57,7 +57,7 @@ module.exports = function Phyper() {
 	for (let p in params) {
 	    if (params.hasOwnProperty(p)) {
 		param_str += " ";
-		param_value = params[p];
+		let param_value = params[p];
 		if (param_value === null) {
 		    param_str += p;
 		}
@@ -115,7 +115,7 @@ module.exports = function Phyper() {
 	for (let p in params) {
 	    if (params.hasOwnProperty(p)) {
 		param_str += " ";
-		param_value = params[p];
+		let param_value = params[p];
 		param_str += p + ": " + param_value + ';';
 		}
 	    }

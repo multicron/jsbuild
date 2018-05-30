@@ -221,7 +221,7 @@ function tick_game() {
 	    if (players[i].dash) {
 		one_step(players[i]);
 		if (players[i].is_robot) {
-		    players[i].dash--;
+//		    players[i].dash--;
 		}
 	    }
 	}
@@ -366,7 +366,7 @@ function turn_robot(p) {
 
     if (p.dir !== new_dir) {
 	p.dir = new_dir;
-	p.dash = 5;
+//	p.dash = 5;
     }
 }
 

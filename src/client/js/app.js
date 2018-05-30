@@ -6,12 +6,14 @@
 
 'use strict';
 
-const io = require('socket.io-client');
-const globals = require('../../lib/globals.js');
-const constant = require("../../lib/constant.js");
-const Player = require("../../lib/Player.js");
+class Testomagic { constructor() {}}
 
-const Phyper = require("../../lib/Phyper.js");
+const io = require('socket.io-client');
+const globals = require('globals.js');
+const constant = require("constant.js");
+const Player = require("Player.js");
+
+const Phyper = require("Phyper.js");
 const html = new Phyper();
 
 let socket;
@@ -58,6 +60,7 @@ let div_login = document.createElement('div');
 let players = [];
 let server_status = {};
 let client_status = {};
+let world_updates = 0;
 
 let all_cells = [];
 
@@ -107,7 +110,7 @@ function init() {
 						left: 0,
 						"padding-left": "10px",
 						width: "100%",
-						height: "25%",
+						height: "50%",
 						margin: "auto",
 						overflow: "auto"
 					       });
@@ -306,6 +309,11 @@ function update_status() {
 	client_status.scale = "Scale: " + viewport_player.scale.toPrecision(2) + " Dash: " + viewport_player.dash;
     }
     client_status.num_players = "Number Players (client): " + players.length;
+    client_status.world_updates = "World Updates: " + world_updates;
+
+    if (socket) {
+	client_status.transport = "Transport: " + socket.io.engine.transport.name;
+    }
 
     for (let category in server_status) {
 	status += server_status[category] + "<br>";
@@ -434,6 +442,7 @@ function update_player_cells (player,update) {
 
 	    if (num_to_add > update.last_cells.length) {
 		logger("Too far behind-- requesting world update");
+		world_updates++;
 		socket.emit('c_request_world_update');
 	    }
 	    else {
@@ -575,10 +584,10 @@ function animate() {
 
     let animate_start = Date.now();
 
-    if (0) {
+    if (1) {
 	socket.emit('c_latency', Date.now(), function(startTime) {
 	    let latency = Date.now() - startTime;
-	    logger("Latency to server is ",latency);
+	    client_status.latency = "Latency to server is:" + latency;
 	});
     }
 
@@ -597,9 +606,9 @@ function animate() {
 //    logger("Viewport player id",viewport_player.id);
 
     if (viewport_player) {
-	update_zoomer(viewport_player);
+//	update_zoomer(viewport_player);
 
-	update_map(viewport_player);
+//	update_map(viewport_player);
 
 	update_radar(viewport_player);
 
