@@ -19,11 +19,14 @@ const Phyper = require("Phyper.js");
 const NetworkMonitor = require("NetworkMonitor.js");
 const Timer = require("Timer.js");
 
-let logger = function(...args) {
-    debug(...args);
-};
+// Define "logger"
+let logger = function(...args) {debug(...args)};
 
+//disable logging by uncommenting the next line
 //logger = (() => {});
+
+// Reverse the sense of the space bar for dash!
+// Also, add dash by pressing current direction.
 
 app.use(express.static(__dirname + '/../client'));
 
@@ -252,7 +255,6 @@ init_game();
 setInterval(tick_game,80);
 setInterval(() => {netmon.run()},1000);
 setInterval(send_server_status,1000);
-//setInterval(log_status,5000);
 
 
 // Don't touch, IP configurations.

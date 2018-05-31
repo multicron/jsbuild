@@ -14,6 +14,8 @@ module.exports = class RobotPlayer extends Player{
 	this.id = "R"+robot_counter++;
 	this.name = boynames[Math.floor(Math.random()*boynames.length)] + this.id;
 	this.dash = (Math.random() > 0.6) ? 1 : 0;
+	this.prob_left_right = 0.5;
+	this.prob_random_turn = Math.random() / 8 + 0.02;
     }
 
     turn() {
@@ -26,18 +28,15 @@ module.exports = class RobotPlayer extends Player{
 	let c = this.get_collision_object(new_pos.x,new_pos.y);
 	
 	let force_turn = (c===false || (c && c!==this));
-	
-	if (force_turn && rnd < 0.5) {
-	    new_dir = this.turn_left(this.dir);
-	}
-	else if (force_turn && rnd >= 0.5) {
-	    new_dir = this.turn_right(this.dir);
-	}
-	else if (rnd < 0.05) {
-	    new_dir = this.turn_left(this.dir);
-	}
-	else if (rnd < 0.12) {
-	    new_dir = this.turn_right(this.dir);
+	let random_turn = (Math.random() <= this.prob_random_turn);
+
+	if (force_turn || random_turn) {
+	    if (Math.random() < this.prob_left_right) {
+		new_dir = this.turn_left(this.dir);
+	    }
+	    else {
+		new_dir = this.turn_right(this.dir);
+	    }
 	}
 	
 	if (this.dir !== new_dir) {

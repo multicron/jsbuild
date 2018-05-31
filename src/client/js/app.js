@@ -7,8 +7,6 @@
 
 'use strict';
 
-class Testomagic { constructor() {}}
-
 const io = require('socket.io-client');
 const globals = require('globals.js');
 const constant = require("constant.js");
@@ -375,11 +373,17 @@ function key_down(event) {
 }
 
 function key_up(event) {
-    if (event.which === constant.keycode.shift) {
-	$(zoomer).hide();
+    let new_dir = keycode_to_dir(event.which);
+    if (new_dir) {
+	event.preventDefault();
     }
-    else if (event.which === constant.keycode.space) {
-	socket.emit('c_change_dash', 0);
+    else {
+	if (event.which === constant.keycode.shift) {
+	    $(zoomer).hide();
+	}
+	else if (event.which === constant.keycode.space) {
+	    socket.emit('c_change_dash', 0);
+	}
     }
 }
 
@@ -582,7 +586,7 @@ function request_timestamp() {
 }
 
 function animate() {
-    window.requestAnimFrame( animate );
+    window.requestAnimationFrame( animate );
 
     let timer = new Timer((time) => {client_status.animate = "animate took " + time + "ms."});
 
@@ -636,6 +640,7 @@ function update_leaderboard(p) {
 		      shade: players[i].shade_min,
 		      size: players[i].size,
 		      cellcount: players[i].cells.length
+		      score: players[i].score();
 		      };
     }
 
@@ -653,6 +658,7 @@ function update_leaderboard(p) {
 		      size: p.size,
 		      cellcount: p.cells.length,
 		      shade: {h: 50,l: 100,s:100},
+		      score: p.score();
 		      };
     }
     
@@ -663,9 +669,12 @@ function update_leaderboard(p) {
 		{color: color, 
 		 width: "90%"}
 	    )},p.name),
+	    html.td({align: "right"},p.score),
+	    html.td("/"),
 	    html.td({align: "right"},p.cellcount),
 	    html.td("/"),
-	    html.td({align: "left"},p.size));
+	    html.td({align: "left"},p.size)
+	);
     }));
 
 

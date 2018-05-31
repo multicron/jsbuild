@@ -9,6 +9,7 @@ module.exports = class Player {
 	this.name = undefined;
 	this.is_robot = false;
 	this.alive = 1;
+	this.create_time = Date.now();
 	this.dir = constant.direction.up;
 	this.dash =  0; // (Math.random() > 0.5);
 	this.speed = 1.0;
@@ -42,6 +43,10 @@ module.exports = class Player {
 	this.first_cell = 0;
 	this.last_cell = 0;
 	this.lines = [];
+    }
+
+    score() {
+	return Math.floor(this.cells.length * 10 + (Date.now()) - this.create_time) / 1000;
     }
 
     get_collision_object(x,y) {
@@ -122,6 +127,10 @@ module.exports = class Player {
 	    return false;
 	}
 	if (!c.alive) {
+	    return false;
+	}
+	// Can't kill anyone for 1/2 second after spawning
+	if (Date.now() - c.create_time < 500) {
 	    return false;
 	}
 	
