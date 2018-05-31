@@ -212,9 +212,8 @@ io.on('connect', function (socket) {
     });
 
     socket.on('c_request_player_update', function () {
-        // logger('c_request_update_clients from ' + connected_player.id);
-	// socket.emit('s_update_clients',players);
-	// logger("Sent requested s_update_clients to ",connected_player.id);
+        logger('c_request_player_update ' + connected_player.id);
+	socket.emit('s_update_clients',players);
     });
 
     socket.on('c_request_world_update', function () {
