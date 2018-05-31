@@ -8,12 +8,14 @@ const io = require('socket.io')(http);
 const debug = require('debug')('blubio');
 const fs = require('fs');
 
-const globals = require('lib/globals.js');
-const constant = require('lib/constant.js');
-const Player = require('lib/Player.js');
-const PlayerUpdate = require('lib/PlayerUpdate.js');
-const Phyper = require("lib/Phyper.js");
-const boynames = require('lib/boynames.js');
+debug("server.js starting up with NODE_PATH " + process.env.NODE_PATH );
+
+const globals = require('globals.js');
+const constant = require('constant.js');
+const Player = require('Player.js');
+const RobotPlayer = require('RobotPlayer.js');
+const PlayerUpdate = require('PlayerUpdate.js');
+const Phyper = require("Phyper.js");
 
 let logger = function(...args) {
     debug(...args);
@@ -21,7 +23,6 @@ let logger = function(...args) {
 
 //logger = (() => {});
 
-logger("server.js starting up");
 
 const html = new Phyper();
 
@@ -63,6 +64,8 @@ logger(html.div({style: html.CSS({"background-color": "white",
 app.use(express.static(__dirname + '/../client'));
 
 let all_cells = [];
+global.all_cells = all_cells;
+
 let users = [];
 let sockets = {};
 let immortal_socket;
@@ -71,7 +74,6 @@ let player_num = 1;
 let server_status = {};
 let players = [];
 let food = [];
-let robot_counter = 0;
 
 let last_out_bytes = 0;
 let last_out_packets = 0;
@@ -79,14 +81,9 @@ let last_in_bytes = 0;
 let last_in_packets = 0;
 let last_network_monitor = 0;
 
-function add_player() {
-    let player = new Player();
-    player.name = boynames[Math.floor(Math.random()*boynames.length)];
-    player.id = "R"+robot_counter++;
-    player.is_robot = true;
-    player.dash = (Math.random() > 0.6) ? 1 : 0;
+function add_robot() {
+    let player = new RobotPlayer();
     players.push(player);
-
     return player;
 }
 
@@ -116,9 +113,11 @@ function populate_all_cells(p) {
 
     for (let i=0 ; i<players.length; i++) {
 	let p = players[i];
-	for (let j = 0; j< p.cells.length; j++) {
-	    all_cells[p.cells[j].x][p.cells[j].y] = p;
-	    count++;
+	if (p.alive) {
+	    for (let j = 0; j< p.cells.length; j++) {
+		all_cells[p.cells[j].x][p.cells[j].y] = p;
+		count++;
+	    }
 	}
     }
     server_status.cell_count = `Total Cells: ${count}`;
@@ -218,8 +217,10 @@ function tick_game() {
     for (i=0; i<players.length; i++) {
 	if (players[i].alive) {
 	    one_step(players[i]);
+	    populate_all_cells();
 	    if (players[i].dash) {
 		one_step(players[i]);
+		populate_all_cells();
 		if (players[i].is_robot) {
 //		    players[i].dash--;
 		}
@@ -232,7 +233,7 @@ function tick_game() {
     remove_dead_players();
 
     while (players.length < globals.minplayers) {
-	let player = add_player();
+	let player = add_robot();
 	logger("Sending s_add_player");
 	io.sockets.emit('s_add_player',player);
     }
@@ -280,7 +281,7 @@ function send_server_status() {
 
 function one_step(p) {
     if (p.is_robot) {
-	turn_robot(p);
+	p.turn();
 	}
     move_player(p);
     if (check_edge_death(p)) {
@@ -565,7 +566,7 @@ function init_game() {
     // Add initial players to the players[] array
 
     for (let x=0;x<globals.startplayers;x++) {
-	add_player();
+	add_robot();
     }
 }
 

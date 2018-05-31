@@ -1,5 +1,5 @@
-const constant = require('./constant.js');
-const globals = require('./globals.js');
+const constant = require('constant.js');
+const globals = require('globals.js');
 
 // PlayerUpdate Constructor
 
