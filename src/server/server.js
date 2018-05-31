@@ -16,6 +16,7 @@ const Player = require('Player.js');
 const RobotPlayer = require('RobotPlayer.js');
 const PlayerUpdate = require('PlayerUpdate.js');
 const Phyper = require("Phyper.js");
+const NetworkMonitor = require("NetworkMonitor.js");
 
 let logger = function(...args) {
     debug(...args);
@@ -72,14 +73,10 @@ let immortal_socket;
 let player_num = 1;
 
 let server_status = {};
+const netmon = new NetworkMonitor(server_status,'network');
+
 let players = [];
 let food = [];
-
-let last_out_bytes = 0;
-let last_out_packets = 0;
-let last_in_bytes = 0;
-let last_in_packets = 0;
-let last_network_monitor = 0;
 
 function add_robot() {
     let player = new RobotPlayer();
@@ -87,27 +84,6 @@ function add_robot() {
     return player;
 }
 
-function update_viewport_scale(p) {
-    p.scale = 1 + Math.min(4,((p.size - globals.startsize) / 1000));
-}
-
-function update_shade(p) {
-
-    p.shade.h += p.shade_delta.h;
-    if (p.shade.h > p.shade_max.h || p.shade.h < p.shade_min.h) {
-	p.shade_delta.h = 0 - p.shade_delta.h;
-    }
-
-    p.shade.l += p.shade_delta.l;
-    if (p.shade.l > p.shade_max.l || p.shade.l < p.shade_min.l) {
-	p.shade_delta.l = 0 - p.shade_delta.l;
-    }
-
-    p.shade.s += p.shade_delta.s;
-    if (p.shade.s > p.shade_max.s || p.shade.s < p.shade_min.s) {
-	p.shade_delta.s = 0 - p.shade_delta.s;
-    }
-}
 function populate_all_cells(p) {
     let count = 0;
 
@@ -121,45 +97,6 @@ function populate_all_cells(p) {
 	}
     }
     server_status.cell_count = `Total Cells: ${count}`;
-}
-
-function award_collision(killed,killer) {
-    let awarded = killed.cells.length - 90;
-
-    if (awarded > 0) {
-	killer.size += awarded;
-    }
-
-    killed.size = 1;
-}
-
-function monitor_network() {
-    fs.readFile('/proc/net/dev', function(err, data) {
-	if (err) {
-	    throw err;
-	}
-	let re = (/eth0: *(.+)/);
-	let file = data.toString();
-	let match = re.exec(file);
-	let matched_line = match[1];
-	let array = matched_line.split(/ +/);
-	let out_bytes = array[8];
-	let out_packets = array[9];
-	let in_bytes = array[0];
-	let in_packets = array[1];
-
-	let rate_out_bytes = (out_bytes - last_out_bytes);
-	let rate_out_packets = (out_packets - last_out_packets);
-	let rate_in_bytes = (in_bytes - last_in_bytes);
-	let rate_in_packets = (in_packets - last_in_packets);
-
-	server_status.network_speed = `Out: ${rate_out_bytes.toFixed(2)} Bps ${rate_out_packets.toFixed(2)} pkt/sec In: ${rate_in_bytes.toFixed(2)} Bps ${rate_in_packets.toFixed(2)} pkt/sec`;
-
-	last_out_bytes = out_bytes;
-	last_out_packets = out_packets;
-	last_in_bytes = in_bytes;
-	last_in_packets = in_packets;
-    });
 }
 
 function remove_dead_players() {
@@ -179,23 +116,23 @@ function tick_game() {
 
     let i;
 
-    for (i=0 ; i<players.length; i++) {
-	update_viewport_scale(players[i]);
-	update_shade(players[i]);
-    }
+    players.forEach(player => {
+	player.update_viewport_scale();
+	player.update_shade();
+    });
 
     populate_all_cells();
 
-    for (i=0; i<players.length; i++) {
-	if (players[i].alive) {
-	    players[i].one_step();
+    players.forEach(player => {
+	if (player.alive) {
+	    player.one_step();
 	    populate_all_cells();
-	    if (players[i].dash) {
-		players[i].one_step();
+	    if (player.dash) {
+		player.one_step();
 		populate_all_cells();
 	    }
 	}
-    }
+    });
 
     update_clients();
 
@@ -213,10 +150,9 @@ function tick_game() {
 function update_clients() {
     let updates = [];
 
-    for (let i=0; i<players.length; i++) {
-	let player = players[i];
+    players.forEach(player => {
 	let update = new PlayerUpdate();
-
+	
 	// Note that some of these items are objects and must not be modified
 	// or they will change the data in the players array.
 
@@ -232,63 +168,20 @@ function update_clients() {
 	update.last_cells = player.cells.slice(-3); // Last N cells
 
 	updates.push(update);
-    }
+    });
 
-    for (let i=0; i<updates.length; i++) {
-    	let player_socket = sockets[updates[i].id];
+    updates.forEach(update => {
+    	let player_socket = sockets[update.id];
     	if (player_socket) {
     	    player_socket.emit('s_update_client',updates);
     	}
-    }
+    });
 
 }
 
 function send_server_status() {
     logger(server_status);
     io.sockets.emit('s_server_status',server_status);
-}
-
-function one_step(p) {
-    if (p.is_robot) {
-	p.turn();
-	}
-    p.move();
-    if (check_edge_death(p)) {
-	p.alive = 0;
-    }
-    else {
-	let killer = p.check_collision();
-	if (killer) {
-	    award_collision(p,killer);
-	    p.alive = 0;
-	}
-    }
-    shift_player(p);
-}
-
-
-function shift_player(p) {
-
-    if (p.cells.length >= p.size) {
-	let tail_position = p.cells.shift();
-	p.first_cell++;
-    }
-
-    p.cells.push({x: p.position.x,
-		  y: p.position.y
-		 });
-
-    p.last_cell++;
-
-    
-
-}
-
-function check_edge_death(p) {
-    if (p.position.x < 0 || p.position.y < 0 || p.position.x >= globals.world_dim.width || p.position.y >= globals.world_dim.height) {
-	return true;
-    }
-    return false;
 }
 
 function clear_all_cells() {
@@ -311,8 +204,6 @@ io.on('connect', function (socket) {
     let type = socket.handshake.query.type;
 
     // Initialize new player
-
-    let currentPlayer; // Just for legacy code
 
     let connected_player = new Player();
     connected_player.name = "Player " + (player_num++);
@@ -435,7 +326,7 @@ function init_game() {
 init_game();
 
 setInterval(tick_game,80);
-setInterval(monitor_network,1000);
+setInterval(() => {netmon.run();},1000);
 setInterval(send_server_status,1000);
 //setInterval(log_status,5000);
 

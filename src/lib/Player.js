@@ -165,4 +165,25 @@ module.exports = class Player {
 	return new_pos;
     }
 
+    update_viewport_scale() {
+	this.scale = 1 + Math.min(4,((this.size - globals.startsize) / 1000));
+    }
+
+    update_shade() {
+	this.shade.h += this.shade_delta.h;
+	if (this.shade.h > this.shade_max.h || this.shade.h < this.shade_min.h) {
+	    this.shade_delta.h = 0 - this.shade_delta.h;
+	}
+	
+	this.shade.l += this.shade_delta.l;
+	if (this.shade.l > this.shade_max.l || this.shade.l < this.shade_min.l) {
+	    this.shade_delta.l = 0 - this.shade_delta.l;
+	}
+	
+	this.shade.s += this.shade_delta.s;
+	if (this.shade.s > this.shade_max.s || this.shade.s < this.shade_min.s) {
+	    this.shade_delta.s = 0 - this.shade_delta.s;
+	}
+    }
+
 };
