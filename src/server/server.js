@@ -38,7 +38,6 @@ let server_status = {};
 const netmon = new NetworkMonitor(status => {server_status.network = status});
 
 let players = [];
-let food = [];
 
 function add_robot() {
     let player = new RobotPlayer();
@@ -154,6 +153,7 @@ io.on('connect', function (socket) {
     // Initialize new player
 
     let connected_player = new Player();
+
     connected_player.name = "Player " + (player_num++);
     connected_player.id = socket.id;
     connected_player.is_robot = false;
@@ -223,7 +223,7 @@ io.on('connect', function (socket) {
     });
 
     socket.on('c_log', function (data) {
-	logger("Client says: ",data);
+	logger("c_log: ",data);
     });
 
     socket.on('disconnect', function () {
