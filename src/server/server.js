@@ -1,4 +1,4 @@
-/*jslint bitwise: true, node: true */
+/*jslint bitwise: true, node: true, lastsemic: true */
 'use strict';
 
 const express = require('express');
@@ -6,12 +6,12 @@ const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const debug = require('debug')('blubio');
-const fs = require('fs');
 
 debug("server.js starting up with NODE_PATH " + process.env.NODE_PATH );
 
 const globals = require('globals.js');
 const constant = require('constant.js');
+
 const Player = require('Player.js');
 const RobotPlayer = require('RobotPlayer.js');
 const PlayerUpdate = require('PlayerUpdate.js');
@@ -73,7 +73,7 @@ let immortal_socket;
 let player_num = 1;
 
 let server_status = {};
-const netmon = new NetworkMonitor(server_status,'network');
+const netmon = new NetworkMonitor(status => {server_status.network = status});
 
 let players = [];
 let food = [];
@@ -114,8 +114,6 @@ function tick_game() {
 
     clear_all_cells();
 
-    let i;
-
     players.forEach(player => {
 	player.update_viewport_scale();
 	player.update_shade();
@@ -151,23 +149,7 @@ function update_clients() {
     let updates = [];
 
     players.forEach(player => {
-	let update = new PlayerUpdate();
-	
-	// Note that some of these items are objects and must not be modified
-	// or they will change the data in the players array.
-
-	update.id = player.id;
-	update.alive = player.alive;
-	update.size = player.size;
-	update.dash = player.dash;
-	update.position = player.position;
-	update.shade = player.shade;
-	update.scale = player.scale;
-	update.first_cell = player.first_cell; // Number of times "shift" has been called
-	update.last_cell = player.last_cell;   // Number of times "push" has been called
-	update.last_cells = player.cells.slice(-3); // Last N cells
-
-	updates.push(update);
+	updates.push(new PlayerUpdate(player,3));
     });
 
     updates.forEach(update => {
@@ -190,12 +172,6 @@ function clear_all_cells() {
 	    all_cells[i][j]=0;
 	}
     }
-}
-
-function log_players() {
-    players.forEach( function (player) {
-	logger("Player: ",player.id,player.alive,player.size);
-    });
 }
 
 io.on('connect', function (socket) {
@@ -245,6 +221,7 @@ io.on('connect', function (socket) {
         logger('c_change_direction ' + connected_player.id + ' changing direction to ',new_dir);
 
 	let old_dir = connected_player.dir;
+
 	if (old_dir == new_dir) {
 	    // Do nothing
 	}
@@ -273,13 +250,6 @@ io.on('connect', function (socket) {
 	socket.emit('s_update_world',players);
     });
 
-    socket.on('pingcheck', function () {
-        socket.emit('pongcheck');
-    });
-
-    socket.on('windowResized', function (data) {
-    });
-
     socket.on('c_log', function (data) {
 	logger("Client says: ",data);
     });
@@ -289,18 +259,6 @@ io.on('connect', function (socket) {
         logger('[INFO] User ' + connected_player.id + ' disconnected!');
        socket.broadcast.emit('s_player_disc', connected_player);
     });
-
-    socket.on('kick', function(data) {
-    });
-
-    // Heartbeat function, update everytime.  What is target for?
-    // socket.on('0', function(target) {
-    // 	logger("socket.on 0");
-    //     currentPlayer.lastHeartbeat = new Date().getTime();
-    //     if (target.x !== currentPlayer.x || target.y !== currentPlayer.y) {
-    //         currentPlayer.target = target;
-    //     }
-    // });
 
 });
 
@@ -326,7 +284,7 @@ function init_game() {
 init_game();
 
 setInterval(tick_game,80);
-setInterval(() => {netmon.run();},1000);
+setInterval(() => {netmon.run()},1000);
 setInterval(send_server_status,1000);
 //setInterval(log_status,5000);
 

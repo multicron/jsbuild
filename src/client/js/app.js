@@ -3,6 +3,7 @@
 // jshint devel: true
 // jshint strict: true
 // jshint -W097
+// jshint lastsemic: true
 
 'use strict';
 
@@ -650,7 +651,7 @@ function update_leaderboard(p) {
 	leaders.length = 8;
     }
 
-    if (leaders.filter(function (a) {return a.id===p.id;}).length <= 0) {
+    if (leaders.filter(function (a) {return a.id===p.id}).length <= 0) {
 	leaders[8] = {name: p.name,
 		      id: p.id,
 		      size: p.size,

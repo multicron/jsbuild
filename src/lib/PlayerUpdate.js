@@ -3,22 +3,28 @@ const globals = require('globals.js');
 
 // PlayerUpdate Constructor
 
-module.exports = function PlayerUpdate() {
-    this.id = undefined;
-    this.alive = undefined;
-    this.size = undefined;
-    this.dash = 0;
-    this.position = {
-	x: 0,
-	y: 0,
-    };
-    this.shade  = {
-	h: 0,
-	s: 0,
-	l: 0
-    };
-    this.scale  = 1.0;
-    this.first_cell = 0;
-    this.last_cell = 0;
-    this.last_cells = [];
+module.exports = class PlayerUpdate {
+
+    // Note that some of these items copied from player are objects and must not be modified
+    // or they will change the data in the original players array.
+
+    constructor(player,num_cells) {
+	this.id = player.id;
+	this.alive = player.alive;
+	this.size = player.size;
+	this.dash = player.dash;
+	this.position = {
+	    x: player.position.x,
+	    y: player.position.y,
+	};
+	this.shade  = {
+	    h: player.shade.h,
+	    s: player.shade.s,
+	    l: player.shade.l
+	};
+	this.scale  = player.scale;
+	this.first_cell = player.first_cell; // Number of times "shift" has been called
+	this.last_cell = player.last_cell; // Number of times "push" has been called
+	this.last_cells = player.cells.slice(0 - num_cells); // Last N cells
+    }
 };
