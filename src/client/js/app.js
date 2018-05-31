@@ -640,7 +640,6 @@ function update_leaderboard(p) {
 		      shade: players[i].shade_min,
 		      size: players[i].size,
 		      cellcount: players[i].cells.length
-		      score: players[i].score();
 		      };
     }
 
@@ -657,8 +656,7 @@ function update_leaderboard(p) {
 		      id: p.id,
 		      size: p.size,
 		      cellcount: p.cells.length,
-		      shade: {h: 50,l: 100,s:100},
-		      score: p.score();
+		      shade: {h: 50,l: 100,s:100}
 		      };
     }
     
@@ -669,8 +667,6 @@ function update_leaderboard(p) {
 		{color: color, 
 		 width: "90%"}
 	    )},p.name),
-	    html.td({align: "right"},p.score),
-	    html.td("/"),
 	    html.td({align: "right"},p.cellcount),
 	    html.td("/"),
 	    html.td({align: "left"},p.size)
