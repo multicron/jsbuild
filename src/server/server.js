@@ -17,6 +17,7 @@ const RobotPlayer = require('RobotPlayer.js');
 const PlayerUpdate = require('PlayerUpdate.js');
 const Phyper = require("Phyper.js");
 const NetworkMonitor = require("NetworkMonitor.js");
+const Timer = require("Timer.js");
 
 let logger = function(...args) {
     debug(...args);
@@ -110,7 +111,7 @@ function remove_dead_players() {
 
 function tick_game() {
 
-    let tick_game_start = Date.now();
+    let timer = new Timer((time) => {server_status.tick_game = `tick_game took ${time} ms.`});
 
     clear_all_cells();
 
@@ -142,7 +143,8 @@ function tick_game() {
 	io.sockets.emit('s_add_player',player);
     }
     server_status.num_players = `Number Players (server): ${players.length}`;
-    server_status.tick_game = `tick_game took ${Date.now() - tick_game_start} ms.`;
+
+    timer.end();
 }
 
 function update_clients() {
@@ -164,6 +166,15 @@ function update_clients() {
 function send_server_status() {
     logger(server_status);
     io.sockets.emit('s_server_status',server_status);
+}
+
+function init_all_cells() {
+    for (let i=0;i<globals.world_dim.width;i++) {
+	all_cells[i]=[];
+	for (let j=0;j<globals.world_dim.height;j++) {
+	    all_cells[i][j]=0;
+	}
+    }
 }
 
 function clear_all_cells() {
@@ -267,12 +278,7 @@ function init_game() {
     logger("init_game");
     // Initialize "all cells" array for collision detection
 
-    for (let i=0;i<globals.world_dim.width;i++) {
-	all_cells[i]=[];
-	for (let j=0;j<globals.world_dim.height;j++) {
-	    all_cells[i][j]=0;
-	}
-    }
+    init_all_cells();
 
     // Add initial players to the players[] array
 

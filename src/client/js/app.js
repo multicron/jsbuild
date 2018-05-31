@@ -13,6 +13,7 @@ const io = require('socket.io-client');
 const globals = require('globals.js');
 const constant = require("constant.js");
 const Player = require("Player.js");
+const Timer = require("Timer.js");
 
 const Phyper = require("Phyper.js");
 const html = new Phyper();
@@ -583,7 +584,7 @@ function request_timestamp() {
 function animate() {
     window.requestAnimFrame( animate );
 
-    let animate_start = Date.now();
+    let timer = new Timer((time) => {client_status.animate = "animate took " + time + "ms."});
 
     if (1) {
 	socket.emit('c_latency', Date.now(), function(startTime) {
@@ -594,17 +595,15 @@ function animate() {
 
     clear_board();
 
-    let refresh_player_start = Date.now();
+    let refresh_timer = new Timer((time) => {client_status.refresh_player = "refresh_player took " + time + "ms."});
 
-    for (let i=0; i<players.length; i++) {
-	refresh_player(players[i]);
-    }
+    players.forEach(player => {
+	refresh_player(player);
+    });
 
-    client_status.refresh_player = "refresh_player took " + (Date.now() - refresh_player_start) + "ms.";
+    refresh_timer.end();
 
     viewport_player = get_player_by_id(socket.id);
-
-//    logger("Viewport player id",viewport_player.id);
 
     if (viewport_player) {
 //	update_zoomer(viewport_player);
@@ -616,18 +615,15 @@ function animate() {
 	update_leaderboard(viewport_player);
     }
 
-    for (let i=0; i<players.length; i++) {
-//	if (players[i].size >= Math.floor(viewport_player.size * 0.25)) {
-	    draw_name(players[i]);
-//	}
-    }
+    players.forEach(player => {
+	draw_name(player);
+    });
 
     update_viewport(viewport_player);
 
     update_status();
 
-    client_status.animate = "animate took " + (Date.now() - animate_start) + "ms.";
-
+    timer.end();
     
 }
 
