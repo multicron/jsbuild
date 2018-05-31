@@ -54,6 +54,30 @@ module.exports = class Player {
 	return global.all_cells[x][y];
     }
 
+    move() {
+	
+	let new_pos = this.predict_position(1);
+	
+	this.position.x = new_pos.x;
+	this.position.y = new_pos.y;
+    }
+
+    check_collision() {
+	let c = this.get_collision_object(this.position.x,this.position.y);
+	
+	if (c===false) {
+	    return false;
+	}
+	if (c === this) {
+	    return false;
+	}
+	if (!c.alive) {
+	    return false;
+	}
+	
+	return c;
+    }
+    
     predict_position(steps) {
 
 	let delta = {

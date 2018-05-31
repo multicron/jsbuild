@@ -171,34 +171,6 @@ function remove_dead_players() {
     }
 }
 
-function turn_right(dir) {
-    switch (dir) {
-    case constant.direction.up: 
-	return constant.direction.right;
-    case constant.direction.left: 
-	return constant.direction.up;
-    case constant.direction.down: 
-	return constant.direction.left;
-    case constant.direction.right: 
-	return constant.direction.down;
-    }
-    return constant.direction.stopped;
-}
-
-function turn_left(dir) {
-    switch (dir) {
-    case constant.direction.up: 
-	return constant.direction.left;
-    case constant.direction.left: 
-	return constant.direction.down;
-    case constant.direction.down: 
-	return constant.direction.right;
-    case constant.direction.right: 
-	return constant.direction.up;
-    }
-    return constant.direction.stopped;
-}
-
 function tick_game() {
 
     let tick_game_start = Date.now();
@@ -283,12 +255,12 @@ function one_step(p) {
     if (p.is_robot) {
 	p.turn();
 	}
-    move_player(p);
+    p.move();
     if (check_edge_death(p)) {
 	p.alive = 0;
     }
     else {
-	let killer = check_collision(p);
+	let killer = p.check_collision();
 	if (killer) {
 	    award_collision(p,killer);
 	    p.alive = 0;
@@ -308,22 +280,6 @@ function get_collision_object(x,y) {
     return all_cells[x][y];
 }
 
-function check_collision(p) {
-    let c = get_collision_object(p.position.x,p.position.y);
-
-    if (c===false) {
-	return false;
-    }
-    if (c === p) {
-	return false;
-    }
-    if (!c.alive) {
-	return false;
-    }
-
-    return c;
-}
-
 function shift_player(p) {
 
     if (p.cells.length >= p.size) {
@@ -341,85 +297,12 @@ function shift_player(p) {
 
 }
 
-function turn_robot(p) {
-    let rnd = Math.random();
-
-    let new_pos = predict_player_position(p,2);
-
-    let new_dir = p.dir;
-
-    let c = get_collision_object(new_pos.x,new_pos.y);
-
-    let force_turn = (c===false || (c && c!==p));
-
-    if (force_turn && rnd < 0.5) {
-	new_dir = turn_left(p.dir);
-    }
-    else if (force_turn && rnd >= 0.5) {
-	new_dir = turn_right(p.dir);
-    }
-    else if (rnd < 0.05) {
-	new_dir = turn_left(p.dir);
-    }
-    else if (rnd < 0.12) {
-	new_dir = turn_right(p.dir);
-    }
-
-    if (p.dir !== new_dir) {
-	p.dir = new_dir;
-//	p.dash = 5;
-    }
-}
-
-function predict_player_position(p,steps) {
-
-    let delta = {
-	x: 0,
-	y: 0,
-    };
-    
-    switch (p.dir) {
-    case constant.direction.right: 
-	delta.x = 1;
-	delta.y = 0;
-	break;
-    case constant.direction.down: 
-	delta.x = 0;
-	delta.y = 1;
-	break;
-    case constant.direction.left: 
-	delta.x = -1;
-	delta.y = 0;
-	break;
-    case constant.direction.up: 
-	delta.x = 0;
-	delta.y = -1;
-	break;
-    case constant.direction.stopped:
-	delta.x = 0;
-	delta.y = 0;
-	break;
-    }
-    
-    let new_pos = {x: p.position.x + delta.x * steps,
-		   y: p.position.y + delta.y * steps,
-		  };
-
-    return new_pos;
-}
-
 function move_player(p) {
 
-    let new_pos = predict_player_position(p,1);
+    let new_pos = p.predict_position(1);
 
     p.position.x = new_pos.x;
     p.position.y = new_pos.y;
-
-    // Fill in the all_cells array so that we can collide with things
-
-    if (all_cells[p.position] && !all_cells[p.position.x][p.position.y]) {
-	all_cells[p.position.x][p.position.y] = p;
-    }
 }
 
 function check_edge_death(p) {
