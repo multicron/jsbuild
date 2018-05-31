@@ -62,6 +62,56 @@ module.exports = class Player {
 	this.position.y = new_pos.y;
     }
 
+    one_step() {
+	if (this.is_robot) {
+	    this.turn();
+	}
+	this.move();
+	if (this.check_edge_death()) {
+	    this.alive = 0;
+	}
+	else {
+	    let killer = this.check_collision();
+	    if (killer) {
+		this.award_collision(this,killer);
+		this.alive = 0;
+	    }
+	}
+	this.shift_player();
+    }
+    
+    
+    award_collision(killed,killer) {
+	let awarded = killed.cells.length - 90;
+	
+	if (awarded > 0) {
+	    killer.size += awarded;
+	}
+	
+	killed.size = 1;
+    }
+
+    shift_player() {
+	
+	if (this.cells.length >= this.size) {
+	    let tail_position = this.cells.shift();
+	    this.first_cell++;
+	}
+	
+	this.cells.push({x: this.position.x,
+			 y: this.position.y
+			});
+	
+	this.last_cell++;
+    }
+    
+    check_edge_death() {
+	if (this.position.x < 0 || this.position.y < 0 || this.position.x >= globals.world_dim.width || this.position.y >= globals.world_dim.height) {
+	    return true;
+	}
+	return false;
+    }
+    
     check_collision() {
 	let c = this.get_collision_object(this.position.x,this.position.y);
 	

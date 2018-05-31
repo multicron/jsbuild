@@ -188,14 +188,11 @@ function tick_game() {
 
     for (i=0; i<players.length; i++) {
 	if (players[i].alive) {
-	    one_step(players[i]);
+	    players[i].one_step();
 	    populate_all_cells();
 	    if (players[i].dash) {
-		one_step(players[i]);
+		players[i].one_step();
 		populate_all_cells();
-		if (players[i].is_robot) {
-//		    players[i].dash--;
-		}
 	    }
 	}
     }
@@ -270,16 +267,6 @@ function one_step(p) {
 }
 
 
-function get_collision_object(x,y) {
-    if (x <=0 || 
-	y <=0 || 
-	x >= globals.world_dim.width ||
-	y >= globals.world_dim.height) {
-	return false;
-    }
-    return all_cells[x][y];
-}
-
 function shift_player(p) {
 
     if (p.cells.length >= p.size) {
@@ -295,14 +282,6 @@ function shift_player(p) {
 
     
 
-}
-
-function move_player(p) {
-
-    let new_pos = p.predict_position(1);
-
-    p.position.x = new_pos.x;
-    p.position.y = new_pos.y;
 }
 
 function check_edge_death(p) {
