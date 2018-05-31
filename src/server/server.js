@@ -211,11 +211,6 @@ io.on('connect', function (socket) {
 	connected_player.dash = dash;
     });
 
-    socket.on('c_request_player_update', function () {
-        logger('c_request_player_update ' + connected_player.id);
-	socket.emit('s_update_clients',players);
-    });
-
     socket.on('c_request_world_update', function () {
         logger('c_request_world_update from ' + connected_player.id);
 	socket.emit('s_update_world',players);
@@ -229,6 +224,11 @@ io.on('connect', function (socket) {
 	logger("Got disconnect");
         logger('User ' + connected_player.id + ' disconnected!');
        socket.broadcast.emit('s_player_disc', connected_player);
+    });
+
+    socket.on('c_request_player_update', function () {
+        logger('c_request_player_update ' + connected_player.id);
+	socket.emit('s_update_clients',players);
     });
 
 });
