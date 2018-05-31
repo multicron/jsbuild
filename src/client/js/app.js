@@ -671,8 +671,6 @@ function update_leaderboard(p) {
 
 }
 
-
-
 function update_viewport(p) {
     let update_viewport_start = Date.now();
 

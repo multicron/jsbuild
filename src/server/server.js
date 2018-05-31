@@ -25,50 +25,11 @@ let logger = function(...args) {
 
 //logger = (() => {});
 
-
-const html = new Phyper();
-
-const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-
-logger(html.div({style: html.CSS({"background-color": "white",
-				  opacity: "0.7",
-				  display: "inline-block",
-				  position: "fixed",
-				  top: 0,
-				  bottom: 0,
-				  left: 0,
-				  right: 0,
-				  width: "50%",
-				  height: "50%",
-				  margin: "auto"})},
-		html.a("Link to Google",{href: "http://www.google.com/"},{target: "_top"}),
-		html.a(["List","of","text"],{href: "http://www.yelp.com/"},{target: "_top"}),
-		html.br({clear:null}),
-		html.select({id:"demo1"},[0,1,2,3,4,5,6,7,8,9].map(x => html.option({value: x},x==5 ? {selected: null} : {}))),
-		html.select({id:"demo2"},[...Array(20).keys()].map(x => html.option({value: x},x==15 ? {selected: null} : {}))),
-		html.select({id:"demo3"},months.map(x => html.option({value: x},x))),
-		html.select({id:"demo4"},[...months.keys()].map(x => html.option({value: x+1},months[x]))),
-		html.ul(["dogs","cats","birds","hampsters"].map(x => html.li(x + " are the best"))),
-		html.ul(["dogs","cats","birds","hampsters"].reduce((acc,val) => acc + html.li(val + " are the best"),"")),
-		html.table(html.tr(html.td("Hello"),html.td("There"),html.td("How"))),
-		html.a("Link to Mauicomputing",{href: "http://www.google.com/"}),
-		html.br(),
-		html.hr({width:10}),
-		html.textarea("Here is some editable text"),
-		html.form({action: "index.html",method: "get"},
-			  "Bluby:",html.input({type: "text", name: "bluby"}),
-			  "Loves:",html.input({type: "text", name: "loves"}),
-			  "You:",html.input({type: "text", name: "you"}),
-			  html.input({type: "submit", name: "process"}))
-		
-    ));
-
 app.use(express.static(__dirname + '/../client'));
 
 let all_cells = [];
 global.all_cells = all_cells;
 
-let users = [];
 let sockets = {};
 let immortal_socket;
 let player_num = 1;
@@ -267,7 +228,7 @@ io.on('connect', function (socket) {
 
     socket.on('disconnect', function () {
 	logger("Got disconnect");
-        logger('[INFO] User ' + connected_player.id + ' disconnected!');
+        logger('User ' + connected_player.id + ' disconnected!');
        socket.broadcast.emit('s_player_disc', connected_player);
     });
 
