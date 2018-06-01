@@ -4,7 +4,17 @@ module.exports = class Timer {
 	this.callback = callback;
     }
 
+    start() {
+	this.start_time = Date.now();
+    }
+
     end() {
 	this.callback(Date.now() - this.start_time);
+    }
+
+    time(callback) {
+	this.start();
+	callback();
+	this.end();
     }
 };

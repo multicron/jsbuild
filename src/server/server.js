@@ -117,7 +117,7 @@ function update_clients() {
     let updates = [];
 
     players.forEach(player => {
-	updates.push(new PlayerUpdate(player,3));
+	updates.push(new PlayerUpdate(player,4));
     });
 
     updates.forEach(update => {

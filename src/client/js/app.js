@@ -32,18 +32,6 @@ logger = function(...args) {
 
 logger = function() {};
 
-// requestAnim shim layer by Paul Irish
-    window.requestAnimFrame = (function(){
-      return  window.requestAnimationFrame       || 
-              window.webkitRequestAnimationFrame || 
-              window.mozRequestAnimationFrame    || 
-              window.oRequestAnimationFrame      || 
-              window.msRequestAnimationFrame     || 
-              function(/* function */ callback, /* DOMElement */ element){
-                window.setTimeout(callback, 100);
-              };
-    })();
-  
 let board;
 let board_ctx;
 let zoomer;
@@ -66,34 +54,27 @@ let all_cells = [];
 
 let viewport_player;
 
+const anim_delay_timer = new Timer((time) => {client_status.animate_delay = "delay between animations " + time + "ms"});
+const anim_timer = new Timer((time) => {client_status.animate = "animate took " + time + "ms"});
+const refresh_timer = new Timer((time) => {client_status.refresh_player = "refresh_player took " + time + "ms"});
+const viewport_update_timer = new Timer((time) => {client_status.update_viewport = "update_viewport took " + time + "ms"});
+
 init();
 animate();
 
 function get_player_by_id(id) {
-    let matching_players =  players.filter(function (p) {
-	return p.id==id;
-	});
-    if (matching_players.length == 1) {
-	return matching_players[0];
-    }
-    else if (matching_players.length > 1) {
-	logger("Multiple matches to id in players[] array!");
-	return matching_players[0];
-    }
-    else {
-	return undefined;
-    }
+    return players.find(p => {return p.id == id});
 }
 
 function init() {
 
+    socket = io({query:"type=player"});
 
-    if (!socket) {
-//        socket = io({query:"type=player",transports:['websocket']});
-        socket = io({query:"type=player"});
-        setupSocket(socket);
-	socket.emit("c_request_world_update");
-    }
+    init_socket(socket);
+
+    socket.emit("c_request_world_update");
+
+    viewport_player = get_player_by_id(socket.id);
 
     const page = document.body;
 
@@ -299,6 +280,8 @@ function init() {
 
     window.setInterval(request_leaderboard,1000);
     window.setInterval(request_latency,1000);
+    window.setInterval(update_radar,500);
+
 }
 
 function request_latency() {
@@ -338,7 +321,6 @@ function mouse_move(event) {
     let pt = get_mouse_pos(viewport, event);
     logger("MousePos", pt);
     let new_dir = mouse_pos_to_dir(pt);
-    let old_dir = viewport_player.dir;
 }
 
 function keycode_to_dir(keycode) {
@@ -478,10 +460,7 @@ function update_players (updates) {
 
 	let player = get_player_by_id(update.id);
 
-	if (player === undefined) {
-	    logger("Can't update this player: "+updates[i]);
-	}
-	else {
+	if (player) {
 	    player.size = update.size;
 	    player.dash = update.dash;
 	    player.alive = update.alive;
@@ -506,7 +485,7 @@ function remove_dead_players() {
 }
 
 
-function setupSocket(socket) {
+function init_socket(socket) {
     socket.on('s_server_status', function (status) {
 	server_status = status;
     });
@@ -610,14 +589,21 @@ function request_leaderboard() {
 }
 
 function animate() {
+    // Measure the delay between invocations of this function
+    anim_delay_timer.end();
+    anim_delay_timer.start();
+
+    // Immediately request another frame
     window.requestAnimationFrame( animate );
 
-    let timer = new Timer((time) => {client_status.animate = "animate took " + time + "ms."});
+    // Time the whole animate process
+    anim_timer.start();
 
+    viewport_player = get_player_by_id(socket.id) || new Player();
 
     clear_board();
 
-    let refresh_timer = new Timer((time) => {client_status.refresh_player = "refresh_player took " + time + "ms."});
+    refresh_timer.start();
 
     players.forEach(player => {
 	refresh_player(player);
@@ -625,30 +611,29 @@ function animate() {
 
     refresh_timer.end();
 
-    viewport_player = get_player_by_id(socket.id);
-
     if (viewport_player) {
 //	update_zoomer(viewport_player);
 
 //	update_map(viewport_player);
 
-	update_radar(viewport_player);
     }
 
     players.forEach(player => {
 	draw_name(player);
     });
 
-    update_viewport(viewport_player);
+    if (viewport_player) {
+	update_viewport(viewport_player);
+    }
 
     update_status();
 
-    timer.end();
+    anim_timer.end();
     
 }
 
 function update_viewport(p) {
-    let update_viewport_start = Date.now();
+    viewport_update_timer.start();
 
     let width = globals.world_dim.width;
     let height = globals.world_dim.height;
@@ -680,9 +665,7 @@ function update_viewport(p) {
 
     viewport_ctx.drawImage(board,x_pixel,y_pixel,width_pixel*p.scale,height_pixel*p.scale,0,0,width_pixel,height_pixel);
 
-    client_status.viewport_update = "Viewport update took " +(Date.now() - update_viewport_start) + "ms";
-
-//    logger("Viewport update took ",Date.now() - update_viewport_start, "ms");
+    viewport_update_timer.end();
 }
 
 function update_zoomer(p) {
@@ -738,7 +721,7 @@ function update_map(p) {
 		     );
 }
 
-function update_radar(p) {
+function update_radar() {
     let width = globals.world_dim.width/32;
     let height = globals.world_dim.height/32;
 
@@ -904,8 +887,6 @@ function draw_head(p) {
 function draw_name(p) {
     let color = 'hsl('+p.shade.h+','+p.shade.l+'%,'+p.shade.s+'%)';
     board_ctx.fillStyle = color;
-
-//    let scale = viewport_player ? viewport_player.scale : 1.0;
 
     let scale = p.scale;
 
