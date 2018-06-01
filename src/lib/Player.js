@@ -45,10 +45,6 @@ module.exports = class Player {
 	this.lines = [];
     }
 
-    score() {
-	return Math.floor(this.cells.length * 10 + (Date.now()) - this.create_time) / 1000;
-    }
-
     get_collision_object(x,y) {
 	if (x <=0 || 
 	    y <=0 || 

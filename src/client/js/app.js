@@ -297,9 +297,15 @@ function init() {
     $(window).mouseout(log_event);
     $(window).mousemove(log_event);
 
-//    window.setInterval(request_player_update, 50);
+    window.setInterval(request_leaderboard,1000);
+    window.setInterval(request_latency,1000);
+}
 
-    window.setInterval(request_timestamp,100);
+function request_latency() {
+    socket.emit('c_latency', Date.now(), function(startTime) {
+	let latency = Date.now() - startTime;
+	client_status.latency = "Latency to server is:" + latency;
+    });
 }
 
 function update_status() {
@@ -514,6 +520,11 @@ function setupSocket(socket) {
 	players = players_from_server;
     });
 
+    socket.on('s_update_leaderboard', function (leaders) {
+	logger("Got leaderboard update");
+	div_leaderboard.innerHTML = fillin_leaderboard(leaders);
+    });
+
     socket.on('s_add_player', function (player) {
 	logger("Got add player");
 	players.push(player);
@@ -538,6 +549,19 @@ function setupSocket(socket) {
         globals.kicked = true;
         socket.close();
     });
+}
+
+function fillin_leaderboard(leaders) {
+        return html.div("Leaderboard") + html.table(leaders.map(function (p){
+
+	return html.tr(
+	    html.td({style: html.CSS(
+		{color: 'hsl('+p.shade.h+','+p.shade.l+'%,'+p.shade.s+'%)',
+		 width: "90%"}
+	    )},p.name),
+	    html.td({align: "right"},p.add_score > 0 ? p.add_score + "+" + p.score : p.score)
+	);
+    }));
 }
 
 function draw_axes(ctx) {
@@ -581,8 +605,8 @@ function request_player_update() {
     socket.emit('c_request_player_update');
 }
 
-function request_timestamp() {
-    socket.emit('c_timestamp', Date.now());
+function request_leaderboard() {
+    socket.emit('c_request_leaderboard');
 }
 
 function animate() {
@@ -590,12 +614,6 @@ function animate() {
 
     let timer = new Timer((time) => {client_status.animate = "animate took " + time + "ms."});
 
-    if (1) {
-	socket.emit('c_latency', Date.now(), function(startTime) {
-	    let latency = Date.now() - startTime;
-	    client_status.latency = "Latency to server is:" + latency;
-	});
-    }
 
     clear_board();
 
@@ -615,8 +633,6 @@ function animate() {
 //	update_map(viewport_player);
 
 	update_radar(viewport_player);
-
-	update_leaderboard(viewport_player);
     }
 
     players.forEach(player => {
@@ -629,51 +645,6 @@ function animate() {
 
     timer.end();
     
-}
-
-function update_leaderboard(p) {
-    let leaders = [];
-
-    for (let i=0; i<players.length; i++) {
-	leaders[i] = {name: players[i].name,
-		      id: players[i].id,
-		      shade: players[i].shade_min,
-		      size: players[i].size,
-		      cellcount: players[i].cells.length
-		      };
-    }
-
-    leaders.sort(function (a,b) {
-	return b.size - a.size;
-    });
-
-    if (leaders.length > 8) {
-	leaders.length = 8;
-    }
-
-    if (leaders.filter(function (a) {return a.id===p.id}).length <= 0) {
-	leaders[8] = {name: p.name,
-		      id: p.id,
-		      size: p.size,
-		      cellcount: p.cells.length,
-		      shade: {h: 50,l: 100,s:100}
-		      };
-    }
-    
-    div_leaderboard.innerHTML = html.div("Leaderboard") + html.table(leaders.map(function (p){
-	let color = 'hsl('+p.shade.h+','+p.shade.l+'%,'+p.shade.s+'%)';
-	return html.tr(
-	    html.td({style: html.CSS(
-		{color: color, 
-		 width: "90%"}
-	    )},p.name),
-	    html.td({align: "right"},p.cellcount),
-	    html.td("/"),
-	    html.td({align: "left"},p.size)
-	);
-    }));
-
-
 }
 
 function update_viewport(p) {

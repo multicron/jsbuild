@@ -14,9 +14,15 @@ const constant = require('constant.js');
 
 const Player = require('Player.js');
 const RobotPlayer = require('RobotPlayer.js');
+
 const PlayerUpdate = require('PlayerUpdate.js');
+const Leader = require('Leader.js');
+
 const Phyper = require("Phyper.js");
+const html = new Phyper();
+
 const NetworkMonitor = require("NetworkMonitor.js");
+
 const Timer = require("Timer.js");
 
 // Define "logger"
@@ -24,9 +30,6 @@ let logger = function(...args) {debug(...args)};
 
 //disable logging by uncommenting the next line
 //logger = (() => {});
-
-// Reverse the sense of the space bar for dash!
-// Also, add dash by pressing current direction.
 
 app.use(express.static(__dirname + '/../client'));
 
@@ -131,6 +134,28 @@ function send_server_status() {
     io.sockets.emit('s_server_status',server_status);
 }
 
+function update_leaderboard(p) {
+    let leaders = [];
+
+    for (let i=0; i<players.length; i++) {
+	leaders[i] = new Leader(players[i]);
+    }
+
+    leaders.sort(function (a,b) {
+	return b.score - a.score;
+    });
+
+    if (leaders.length > 8) {
+	leaders.length = 8;
+    }
+
+    if (leaders.filter(function (a) {return a.id===p.id}).length <= 0) {
+	leaders[8] = new Leader(p);
+    }
+
+    return leaders;
+}
+
 function init_all_cells() {
     for (let i=0;i<globals.world_dim.width;i++) {
 	all_cells[i]=[];
@@ -188,10 +213,6 @@ io.on('connect', function (socket) {
 	cb(startTime);
     }); 
 
-    socket.on('c_timestamp', function (clientTime) {
-//	logger("Client time lag = ",Date.now() - clientTime);
-    }); 
-
     socket.on('c_change_direction', function (new_dir) {
         logger('c_change_direction ' + connected_player.id + ' changing direction to ',new_dir);
 
@@ -217,6 +238,11 @@ io.on('connect', function (socket) {
     socket.on('c_request_world_update', function () {
         logger('c_request_world_update from ' + connected_player.id);
 	socket.emit('s_update_world',players);
+    });
+
+    socket.on('c_request_leaderboard', function () {
+        logger('c_request_leaderboard from ' + connected_player.id);
+	socket.emit('s_update_leaderboard',update_leaderboard(connected_player));
     });
 
     socket.on('c_log', function (data) {
