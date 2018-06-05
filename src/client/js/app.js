@@ -11,6 +11,7 @@ const io = require('socket.io-client');
 const globals = require('globals.js');
 const constant = require("constant.js");
 const Player = require("Player.js");
+const Observer = require("Observer.js");
 const Timer = require("Timer.js");
 
 const Phyper = require("Phyper.js");
@@ -54,10 +55,13 @@ let all_cells = [];
 
 let viewport_player;
 
+let observer;
+
 const anim_delay_timer = new Timer((time) => {client_status.animate_delay = "delay between animations " + time + "ms"});
 const anim_timer = new Timer((time) => {client_status.animate = "animate took " + time + "ms"});
 const refresh_timer = new Timer((time) => {client_status.refresh_player = "refresh_player took " + time + "ms"});
 const viewport_update_timer = new Timer((time) => {client_status.update_viewport = "update_viewport took " + time + "ms"});
+const update_players_timer = new Timer((time) => {client_status.update_players = "update_players took " + time + "ms"});
 
 init();
 animate();
@@ -73,8 +77,6 @@ function init() {
     init_socket(socket);
 
     socket.emit("c_request_world_update");
-
-    viewport_player = get_player_by_id(socket.id);
 
     const page = document.body;
 
@@ -453,6 +455,7 @@ function update_player_cells (player,update) {
 }
 
 function update_players (updates) {
+    update_players_timer.start();
     for (let i=0; i<updates.length; i++) {
 	let update = updates[i];
 
@@ -473,12 +476,16 @@ function update_players (updates) {
 	}
     
     remove_dead_players();
+    update_players_timer.end();
 }
 
 function remove_dead_players() {
     let i = players.length;
     while (i--) {
 	if (!players[i].alive) {
+	    if (players[i] === viewport_player) {
+		observer = new Observer(viewport_player);
+	    }
 	    players.splice(i, 1);
 	} 
     }
@@ -599,7 +606,17 @@ function animate() {
     // Time the whole animate process
     anim_timer.start();
 
-    viewport_player = get_player_by_id(socket.id) || new Player();
+    let this_player = get_player_by_id(socket.id);
+
+    if (this_player) {
+	viewport_player = this_player;
+    }
+    else if (observer) {
+	viewport_player = observer;
+    }
+    else {
+	viewport_player = null;
+    }
 
     clear_board();
 
@@ -610,13 +627,6 @@ function animate() {
     });
 
     refresh_timer.end();
-
-    if (viewport_player) {
-//	update_zoomer(viewport_player);
-
-//	update_map(viewport_player);
-
-    }
 
     players.forEach(player => {
 	draw_name(player);
@@ -641,7 +651,6 @@ function update_viewport(p) {
     let x = p.position.x - p.scale*globals.view_dim.width/2;
     let y = p.position.y - p.scale*globals.view_dim.height/2;
 
-    viewport_ctx.resetTransform(); // Not implemented in all browsers
     viewport_ctx.strokeStyle = 'rgb(0,0,0)';
     viewport_ctx.clearRect( 0, 0, viewport_ctx.canvas.width, viewport_ctx.canvas.height);
 

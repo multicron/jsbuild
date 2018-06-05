@@ -106,32 +106,84 @@ function tick_game() {
     while (players.length < globals.minplayers) {
 	let player = add_robot();
 	logger("Sending s_add_player");
-	io.sockets.emit('s_add_player',player);
+	broadcast('s_add_player',player);
     }
     server_status.num_players = `Number Players (server): ${players.length}`;
 
     timer.end();
 }
 
+function volatile_broadcast(name,data) {
+//    logger("io.sockets","broadcast",name,"bytes: ",JSON.stringify(data).length);
+    io.sockets.volatile.emit(name,data);
+}
+
+function broadcast(name,data) {
+//    logger("io.sockets","broadcast",name,"bytes: ",JSON.stringify(data).length);
+    io.sockets.emit(name,data);
+}
+
+function player_in_client_viewport(player,client) {
+
+    let client_min_x = (client.position.x - client.scale*globals.view_dim.width/2) - 1;
+    let client_min_y = (client.position.y - client.scale*globals.view_dim.height/2) - 1;
+
+    let client_max_x = client_min_x + (client.scale*globals.view_dim.width/2) + 1;
+    let client_max_y = client_min_y + (client.scale*globals.view_dim.height/2) + 1;
+
+    logger(`Client can clip out anything not in ${client_min_x},${client_min_y},${client_max_x},${client_max_y}`);
+
+    let player_max_x = 0;
+    let player_max_y = 0;
+    let player_min_x = globals.view_dim.width;
+    let player_min_y = globals.view_dim.height;
+
+    player.cells.map(cell => {
+	if (cell.x < player_min_x) { player_min_x = cell.x }
+	if (cell.y < player_min_y) { player_min_y = cell.y }
+	if (cell.x > player_max_x) { player_max_x = cell.x }
+	if (cell.y > player_max_y) { player_max_y = cell.y }
+    });
+
+    if (client_min_x > player_max_x) { return false } // Client is offscreen to the right
+    if (client_max_x < player_min_x) { return false } // Client is offscreen to the left
+    if (client_min_y > player_max_y) { return false } // Client is offscreen to the bottom
+    if (client_max_y < player_min_y) { return false } // Client is offscreen to the top
+    
+    return true;
+}
+
 function update_clients() {
     let updates = [];
 
     players.forEach(player => {
-	updates.push(new PlayerUpdate(player,4));
+	updates.push(new PlayerUpdate(player,5));
     });
 
-    updates.forEach(update => {
-    	let player_socket = sockets[update.id];
-    	if (player_socket) {
-    	    player_socket.emit('s_update_client',updates);
-    	}
-    });
+    broadcast('s_update_client',updates);
 
+}
+
+function filtered_update_clients() {
+
+    let clients = players.filter(player => sockets[player.id]);
+
+    clients.forEach(client => {
+	let updates = [];
+	players.forEach(player => {
+	    if (player_in_client_viewport(player,client)) {
+		logger(`Pushing update for client ${client.name}, player ${player.name}`);
+		updates.push(new PlayerUpdate(player,2));
+	    }
+	});
+	let socket = sockets[client.id];
+	socket.emit('s_update_client',updates);
+    });
 }
 
 function send_server_status() {
     logger(server_status);
-    io.sockets.emit('s_server_status',server_status);
+    broadcast('s_server_status',server_status);
 }
 
 function update_leaderboard(p) {
@@ -176,6 +228,23 @@ function clear_all_cells() {
 io.on('connect', function (socket) {
     logger('A user connected!', socket.handshake);
 
+    if (0) {
+	(function () {
+    	    let emit = socket.emit;
+            let onevent = socket.onevent;
+
+    	    socket.emit = function () {
+    		logger('socket.io', 'emit bytes:', arguments[0], JSON.stringify(arguments[1]).length);
+		emit.apply(socket, arguments);
+    	    };
+    	    socket.onevent = function (packet) {
+		logger('socket.io', 'on bytes:', JSON.stringify(packet).length, packet);
+		//		logger('socket.io', 'on', Array.prototype.slice.call(packet.data || []));
+		onevent.apply(socket, arguments);
+    	    };
+	}());
+    }
+    
     let type = socket.handshake.query.type;
 
     // Initialize new player
@@ -193,22 +262,6 @@ io.on('connect', function (socket) {
 
     immortal_socket = socket;
 
-    if (0) {
-	(function () {
-    	    let emit = socket.emit,
-            onevent = socket.onevent;
-	    
-    	    socket.emit = function () {
-    		logger('socket.io', 'emit', arguments[0], arguments[1]);
-		emit.apply(socket, arguments);
-    	    };
-    	    socket.onevent = function (packet) {
-		logger('socket.io', 'on', Array.prototype.slice.call(packet.data || []));
-		onevent.apply(socket, arguments);
-    	    };
-	}());
-    }
-	
     socket.on('c_latency', function (startTime, cb) {
 	cb(startTime);
     }); 

@@ -34,7 +34,7 @@ module.exports = class NetworkMonitor {
 	    this.last_in_bytes = in_bytes;
 	    this.last_in_packets = in_packets;
 
-	    this.callback(`Out: ${rate_out_bytes.toFixed(2)} Bps ${rate_out_packets.toFixed(2)} pkt/sec In: ${rate_in_bytes.toFixed(2)} Bps ${rate_in_packets.toFixed(2)} pkt/sec`);
+	    this.callback(`Out: ${(rate_out_bytes/1000).toFixed(2)} KBps ${rate_out_packets.toFixed(2)} pkt/sec In: ${(rate_in_bytes/1000).toFixed(2)} KBps ${rate_in_packets.toFixed(2)} pkt/sec`);
 	    
 	});
 }
