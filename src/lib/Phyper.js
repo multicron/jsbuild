@@ -6,7 +6,7 @@ let logger = function(...args) {
     debug(...args);
 };
 
-module.exports = function Phyper() {
+let Phyper = (function () {
 
     let _process = (function(tag, close, ...args) {
 	let text = "";
@@ -244,4 +244,8 @@ module.exports = function Phyper() {
     this.var = (function(...args){return _process("var",1,...args);});
     this.video = (function(...args){return _process("video",1,...args);});
     this.wbr = (function(...args){return _process("wbr",0,...args);});
-};
+});
+
+module.exports = new Phyper();
+
+module.exports.Phyper = Phyper;

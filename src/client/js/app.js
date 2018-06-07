@@ -14,8 +14,7 @@ const Player = require("Player.js");
 const Observer = require("Observer.js");
 const Timer = require("Timer.js");
 
-const Phyper = require("Phyper.js");
-const html = new Phyper();
+const html = require("Phyper.js");
 
 let socket;
 
@@ -437,9 +436,8 @@ function update_player_cells (player,update) {
 	    let first_cell_to_add = update.last_cells.length - num_to_add;
 
 	    if (num_to_add > update.last_cells.length) {
-		logger("Too far behind-- requesting world update");
-		world_updates++;
-		socket.emit('c_request_world_update');
+		logger("Too far behind-- requesting player update");
+		socket.emit('c_request_update_one_player',player.id);
 	    }
 	    else {
 		logger("Adding to player "+num_to_add+" first cell "+first_cell_to_add + " length " + update.last_cells.length);
@@ -458,12 +456,15 @@ function update_players (updates) {
     update_players_timer.start();
     for (let i=0; i<updates.length; i++) {
 	let update = updates[i];
-
+	
 	// If we don't have this player yet, we can't update it
-
+	
 	let player = get_player_by_id(update.id);
 
-	if (player) {
+	if (!player) {
+	    socket.emit('c_request_update_one_player',update.id);
+	    }
+	else {
 	    player.size = update.size;
 	    player.dash = update.dash;
 	    player.alive = update.alive;
@@ -472,11 +473,11 @@ function update_players (updates) {
 	    player.scale = update.scale;
 	    
 	    update_player_cells(player,update);
-	    }
 	}
-    
-    remove_dead_players();
-    update_players_timer.end();
+	
+	remove_dead_players();
+	update_players_timer.end();
+    }
 }
 
 function remove_dead_players() {
@@ -511,9 +512,19 @@ function init_socket(socket) {
 	div_leaderboard.innerHTML = fillin_leaderboard(leaders);
     });
 
-    socket.on('s_add_player', function (player) {
-	logger("Got add player");
-	players.push(player);
+    socket.on('s_update_one_player', function (player) {
+	logger("Got update_one_player");
+	let existing = get_player_by_id(player.id);
+
+	// If we already have this player, update it,
+	// but if we don't have it, add it.
+
+	if (existing) {
+	    Object.assign(existing,player);
+	}
+	else {
+	    players.push(player);
+	}
     });
 
     socket.on('player_died', function () {
@@ -586,10 +597,6 @@ function draw_axes(ctx) {
 }
 
 let delaycount = 0;
-
-function request_player_update() {
-    socket.emit('c_request_player_update');
-}
 
 function request_leaderboard() {
     socket.emit('c_request_leaderboard');
@@ -779,9 +786,6 @@ function refresh_player(p) {
 	}
     }
     
-    
-//    draw_head(p.cells[p.cells.length - 1]);
-
     draw_head(p);
 
 }

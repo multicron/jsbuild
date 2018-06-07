@@ -18,8 +18,7 @@ const RobotPlayer = require('RobotPlayer.js');
 const PlayerUpdate = require('PlayerUpdate.js');
 const Leader = require('Leader.js');
 
-const Phyper = require("Phyper.js");
-const html = new Phyper();
+const html = require("Phyper.js");
 
 const NetworkMonitor = require("NetworkMonitor.js");
 
@@ -37,13 +36,16 @@ let all_cells = [];
 global.all_cells = all_cells;
 
 let sockets = {};
-let immortal_socket;
 let player_num = 1;
 
 let server_status = {};
 const netmon = new NetworkMonitor(status => {server_status.network = status});
 
 let players = [];
+
+function get_player_by_id(id) {
+    return players.find(p => {return p.id == id});
+}
 
 function add_robot() {
     let player = new RobotPlayer();
@@ -105,8 +107,8 @@ function tick_game() {
 
     while (players.length < globals.minplayers) {
 	let player = add_robot();
-	logger("Sending s_add_player");
-	broadcast('s_add_player',player);
+	logger("Sending s_update_one_player");
+	broadcast('s_update_one_player',player);
     }
     server_status.num_players = `Number Players (server): ${players.length}`;
 
@@ -157,7 +159,7 @@ function update_clients() {
     let updates = [];
 
     players.forEach(player => {
-	updates.push(new PlayerUpdate(player,5));
+	updates.push(new PlayerUpdate(player,2));
     });
 
     broadcast('s_update_client',updates);
@@ -258,9 +260,11 @@ io.on('connect', function (socket) {
     players.push(connected_player);
     logger('Player ' + connected_player.id + ' connecting!');
 
+    // Send a world update to the new player
     socket.emit('s_update_world',players);
 
-    immortal_socket = socket;
+    // Tell all the other players about this player
+    broadcast('s_update_one_player',connected_player);
 
     socket.on('c_latency', function (startTime, cb) {
 	cb(startTime);
@@ -308,9 +312,10 @@ io.on('connect', function (socket) {
        socket.broadcast.emit('s_player_disc', connected_player);
     });
 
-    socket.on('c_request_player_update', function () {
-        logger('c_request_player_update ' + connected_player.id);
-	socket.emit('s_update_clients',players);
+    socket.on('c_request_update_one_player', function (player_id) {
+        logger(`c_request_update_one_player for connected player ${connected_player.id} updating player id ${player_id}`);
+	let player_to_send = get_player_by_id(player_id);
+	socket.emit('s_update_clients',player_to_send);
     });
 
 });
