@@ -64,10 +64,17 @@ module.exports = class Player {
     }
 
     one_step() {
+	// Change direction (for robots)
+
 	if (this.is_robot) {
 	    this.turn();
 	}
+
+	// Change the position of the head
 	this.move();
+
+	// See if we bumped into anything
+
 	if (this.check_edge_death()) {
 	    this.alive = 0;
 	}
@@ -78,6 +85,7 @@ module.exports = class Player {
 		this.alive = 0;
 	    }
 	}
+
 	this.shift_player();
     }
     
@@ -125,8 +133,8 @@ module.exports = class Player {
 	if (!c.alive) {
 	    return false;
 	}
-	// Can't kill anyone for 1/2 second after spawning
-	if (Date.now() - c.create_time < 500) {
+	// Can't kill anyone for 1 second after spawning
+	if (Date.now() - c.create_time < 1000) {
 	    return false;
 	}
 	

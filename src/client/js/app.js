@@ -49,6 +49,7 @@ let players = [];
 let server_status = {};
 let client_status = {};
 let world_updates = 0;
+let player_updates = 0;
 
 let all_cells = [];
 
@@ -299,7 +300,7 @@ function update_status() {
 	client_status.scale = "Scale: " + viewport_player.scale.toPrecision(2) + " Dash: " + viewport_player.dash;
     }
     client_status.num_players = "Number Players (client): " + players.length;
-    client_status.world_updates = "World Updates: " + world_updates;
+    client_status.world_updates = `World Updates: ${world_updates} Player Updates: ${player_updates}`;
 
     if (socket) {
 	client_status.transport = "Transport: " + socket.io.engine.transport.name;
@@ -520,6 +521,7 @@ function init_socket(socket) {
 	// but if we don't have it, add it.
 
 	if (existing) {
+	    player_updates++;
 	    Object.assign(existing,player);
 	}
 	else {
