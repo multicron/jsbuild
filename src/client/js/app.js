@@ -13,6 +13,7 @@ const constant = require("constant.js");
 const Player = require("Player.js");
 const Observer = require("Observer.js");
 const Timer = require("Timer.js");
+const crypto = require("crypto");
 
 const html = require("Phyper.js");
 
@@ -57,9 +58,9 @@ let viewport_player;
 
 let observer;
 
-const anim_delay_timer = new Timer((time) => {client_status.animate_delay = "delay between animations " + time + "ms"});
-const anim_timer = new Timer((time) => {client_status.animate = "animate took " + time + "ms"});
-const refresh_timer = new Timer((time) => {client_status.refresh_player = "refresh_player took " + time + "ms"});
+const anim_delay_timer = new Timer((time,times) => {client_status.animate_delay = "delay between animations " + times.join(" ")},25);
+const anim_timer = new Timer((time,times) => {client_status.animate = "animate took " + times.join(" ")},25);
+const refresh_timer = new Timer((time,times) => {client_status.refresh_player = "refresh_player took " + times.join(" ")});
 const viewport_update_timer = new Timer((time) => {client_status.update_viewport = "update_viewport took " + time + "ms"});
 const update_players_timer = new Timer((time) => {client_status.update_players = "update_players took " + time + "ms"});
 

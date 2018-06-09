@@ -1,7 +1,9 @@
 module.exports = class Timer {
-    constructor(callback) {
+    constructor(callback,keep) {
 	this.start_time = Date.now();
 	this.callback = callback;
+	this.times = [];
+	this.keep = keep;
     }
 
     start() {
@@ -9,12 +11,13 @@ module.exports = class Timer {
     }
 
     end() {
-	this.callback(Date.now() - this.start_time);
-    }
-
-    time(callback) {
-	this.start();
-	callback();
-	this.end();
+	let elapsed_time = Date.now() - this.start_time;
+	if (this.keep) {
+	    this.times.push(elapsed_time);
+	    if (this.keep < this.times.length) {
+		this.times.shift();
+	    }
+	}
+	this.callback(elapsed_time,this.times);
     }
 };

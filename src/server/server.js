@@ -3,9 +3,10 @@
 
 const express = require('express');
 const app = express();
+const basic_auth = require('express-basic-auth');
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
-const debug = require('debug')('blubio');
+const debug = require('debug')('splines');
 
 debug("server.js starting up with NODE_PATH " + process.env.NODE_PATH );
 
@@ -25,11 +26,13 @@ const NetworkMonitor = require("NetworkMonitor.js");
 const Timer = require("Timer.js");
 
 // Define "logger"
-let logger = function(...args) {debug(...args)};
+let logger = global.logger = function(...args) {debug(...args)};
 
 //disable logging by uncommenting the next line
 //logger = (() => {});
 
+let auth = basic_auth({users: { 'user': 'password' }});
+//app.use(auth);
 app.use(express.static(__dirname + '/../client'));
 
 let all_cells = [];
@@ -42,6 +45,8 @@ let server_status = {};
 const netmon = new NetworkMonitor(status => {server_status.network = status});
 
 let players = [];
+
+const tick_timer = new Timer((time,times) => {server_status.tick_game = `tick_game took ${times.join(' ')}`},50);
 
 function get_player_by_id(id) {
     return players.find(p => {return p.id == id});
@@ -79,25 +84,41 @@ function remove_dead_players() {
 
 function tick_game() {
 
-    let timer = new Timer((time) => {server_status.tick_game = `tick_game took ${time} ms.`});
-
-    clear_all_cells();
+    tick_timer.start();
 
     players.forEach(player => {
 	player.update_viewport_scale();
 	player.update_shade();
     });
 
+    clear_all_cells();
     populate_all_cells();
 
     players.forEach(player => {
 	if (player.alive) {
+	    // This also updates all_cells with new head position,
+	    // but doesn't remove old tail position
 	    player.one_step();
-	    populate_all_cells();
-	    if (player.dash) {
-		player.one_step();
-		populate_all_cells();
-	    }
+	}
+    });
+
+    // Dashing players
+
+    players.forEach(player => {
+	if (player.dash && player.alive) {
+	    // This also updates all_cells with new head position,
+	    // but doesn't remove old tail position
+	    player.one_step();
+	}
+    });
+
+    // Dashing players at scale > 4.0
+
+    players.forEach(player => {
+	if (player.dash && player.scale > 4.0 && player.alive > 4.0) {
+	    // This also updates all_cells with new head position,
+	    // but doesn't remove old tail position
+	    player.one_step();
 	}
     });
 
@@ -112,7 +133,7 @@ function tick_game() {
     }
     server_status.num_players = `Number Players (server): ${players.length}`;
 
-    timer.end();
+    tick_timer.end();
 }
 
 function volatile_broadcast(name,data) {

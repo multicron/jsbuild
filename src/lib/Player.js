@@ -86,7 +86,12 @@ module.exports = class Player {
 	    }
 	}
 
-	this.shift_player();
+	// Update all_cells with new position of head
+
+	if (this.alive) {
+	    global.all_cells[this.position.x][this.position.y] = this;
+	    this.shift_player();
+	}
     }
     
     
@@ -103,7 +108,7 @@ module.exports = class Player {
     shift_player() {
 	
 	if (this.cells.length >= this.size) {
-	    let tail_position = this.cells.shift();
+	    this.cells.shift();
 	    this.first_cell++;
 	}
 	
