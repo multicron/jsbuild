@@ -68,17 +68,18 @@ let div_leaderboard = document.createElement('div');
 let div_login = document.createElement('div');
 let div_viewport = document.createElement('div');
 
+// Are we playing?
+let playing = false;
+
 // The world
 let players = [];
-
-// The collision-detection array (two-dimensional)
-let all_cells = [];
 
 // Status messages and statistics
 let server_status = {};
 let client_status = {};
 let world_updates = 0;
 let player_updates = 0;
+let player_adds = 0;
 let world_changed = false;
 let skipped_animations = 0;
 
@@ -95,13 +96,17 @@ function get_player_by_id(id) {
     return players.find(p => {return p.id == id});
 }
 
-function init() {
-
+function play() {
     socket = io({query:"type=player"});
 
     init_socket(socket);
 
     socket.emit("c_request_world_update");
+
+    playing = true;
+}
+
+function init() {
 
     const page = document.body;
 
@@ -152,10 +157,11 @@ function init() {
 
     // A div for the entering/exiting overlay
 
-    div_login.style.cssText = html.CSS({"background-color": "white",
-				  opacity: "0.7",
+    div_login.style.cssText = html.CSS({"background-color": "blue",
+				  opacity: "0.6",
 				  display: "inline-block",
 				  position: "fixed",
+			          "text-align": "center",		
 				  top: 0,
 				  bottom: 0,
 				  left: 0,
@@ -167,14 +173,16 @@ function init() {
 				 });
 
     div_login.innerHTML = html.form({action: "index.html",method: "get"},
-				    "What is your worm's name?",
+				    "What is your spline's name?",
 				    html.br(),
 				    html.input({type: "text", 
-						name: "worm_name", 
+						name: "spline_name", 
 						id: "worm_name"}),
 				    html.input({type: "submit", 
 						name: "Play", 
 						id: "play_button"}));
+
+    $("#play_button").submit(play);
 
     $(div_login).hide();
 
@@ -311,6 +319,7 @@ function init() {
     window.setInterval(request_latency,1000);
     window.setInterval(update_radar,500);
 
+    play();
 }
 
 function request_latency() {
@@ -327,7 +336,7 @@ function update_status() {
 	client_status.scale = "Scale: " + viewport_player.scale.toPrecision(2) + " Dash: " + viewport_player.dash;
     }
     client_status.num_players = "Number Players (client): " + players.length;
-    client_status.world_updates = `World Updates: ${world_updates} Player Updates: ${player_updates}`;
+    client_status.world_updates = `World Updates: ${world_updates} Player Updates: ${player_updates} Player Adds: ${player_adds}`;
     client_status.skipped_anim = `Skipped Animations: ${skipped_animations}`;
 
     if (socket) {
@@ -517,6 +526,8 @@ function remove_dead_players() {
 	if (!players[i].alive) {
 	    if (players[i] === viewport_player) {
 		observer = new Observer(viewport_player);
+		playing = false;
+		$(div_login).show();
 	    }
 	    players.splice(i, 1);
 	} 
@@ -559,6 +570,7 @@ function init_socket(socket) {
 	    Object.assign(existing,player);
 	}
 	else {
+	    player_adds++;
 	    players.push(player);
 	}
     });
@@ -660,6 +672,7 @@ function animate() {
     let this_player = get_player_by_id(socket.id);
 
     if (this_player) {
+	$(div_login).hide();
 	viewport_player = this_player;
     }
     else if (observer) {

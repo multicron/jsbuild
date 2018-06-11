@@ -251,6 +251,8 @@ function clear_all_cells() {
 io.on('connect', function (socket) {
     logger('A user connected!', socket.handshake);
 
+    let type = socket.handshake.query.type;
+
     if (0) {
 	(function () {
     	    let emit = socket.emit;
@@ -268,8 +270,6 @@ io.on('connect', function (socket) {
 	}());
     }
     
-    let type = socket.handshake.query.type;
-
     // Initialize new player
 
     let connected_player = new Player();
