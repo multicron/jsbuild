@@ -12,7 +12,7 @@ module.exports = class RobotPlayer extends Player{
 	super();
 	this.is_robot = true;
 	this.id = "R"+robot_counter++;
-	this.name = boynames[Math.floor(Math.random()*boynames.length)] + this.id;
+	this.name = boynames[Math.floor(Math.random()*boynames.length)];
 	this.dash = (Math.random() > 0.6) ? 1 : 0;
 	this.prob_left_right = 0.5;
 	this.prob_random_turn = Math.random() / 8 + 0.02;

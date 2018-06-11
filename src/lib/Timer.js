@@ -11,13 +11,13 @@ module.exports = class Timer {
     }
 
     end() {
-	let elapsed_time = Date.now() - this.start_time;
+	this.time = Date.now() - this.start_time;
 	if (this.keep) {
-	    this.times.push(elapsed_time);
+	    this.times.unshift(this.time);
 	    if (this.keep < this.times.length) {
-		this.times.shift();
+		this.times.pop();
 	    }
 	}
-	this.callback(elapsed_time,this.times);
+	this.callback(this);
     }
 };

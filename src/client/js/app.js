@@ -33,36 +33,60 @@ logger = function(...args) {
 
 logger = function() {};
 
+// The whole world and its 2d context
 let board;
 let board_ctx;
+
+// A canvas for a zoomed-in magnifying glass view
 let zoomer;
 let zoomer_ctx;
+
+// The players view of the game (the scale of this varies)
 let viewport;
 let viewport_ctx;
+
+// A view of the whole board one window wide (not currently used)
 let map;
 let map_ctx;
+
+// A small rendering of the whole world
 let radar;
 let radar_ctx;
+
+// The timeout that is going to make the mouse pointer disappear after a short time
+let clear_cursor_timeout;
+
+// The player who is viewing the game viewport
+let viewport_player;
+
+// Once viewport_player has died, this object starts to watch the game instead of a player
+let observer;
+
+// Screen elements
 let div_server_status = document.createElement('div');
 let div_leaderboard = document.createElement('div');
 let div_login = document.createElement('div');
+let div_viewport = document.createElement('div');
+
+// The world
 let players = [];
+
+// The collision-detection array (two-dimensional)
+let all_cells = [];
+
+// Status messages and statistics
 let server_status = {};
 let client_status = {};
 let world_updates = 0;
 let player_updates = 0;
+let world_changed = false;
+let skipped_animations = 0;
 
-let all_cells = [];
-
-let viewport_player;
-
-let observer;
-
-const anim_delay_timer = new Timer((time,times) => {client_status.animate_delay = "delay between animations " + times.join(" ")},25);
-const anim_timer = new Timer((time,times) => {client_status.animate = "animate took " + times.join(" ")},25);
-const refresh_timer = new Timer((time,times) => {client_status.refresh_player = "refresh_player took " + times.join(" ")});
-const viewport_update_timer = new Timer((time) => {client_status.update_viewport = "update_viewport took " + time + "ms"});
-const update_players_timer = new Timer((time) => {client_status.update_players = "update_players took " + time + "ms"});
+const anim_delay_timer = new Timer((timer) => {client_status.animate_delay = "delay between animations " + timer.times.join(" ")},25);
+const anim_timer = new Timer((timer) => {client_status.animate = "animate took " + timer.times.join(" ")},25);
+const refresh_timer = new Timer((timer) => {client_status.refresh_player = "refresh_player took " + timer.times.join(" ")});
+const viewport_update_timer = new Timer((timer) => {client_status.update_viewport = "update_viewport took " + timer.time + "ms"});
+const update_players_timer = new Timer((timer) => {client_status.update_players = "update_players took " + timer.time + "ms"});
 
 init();
 animate();
@@ -101,7 +125,7 @@ function init() {
 
     div_server_status.innerHTML = html.div("Server Status");
 
-//    $(div_server_status).hide();
+    $(div_server_status).hide();
 
     div_leaderboard.style.cssText = html.CSS({"background-color": "none",
 					      "color": "white",
@@ -257,7 +281,9 @@ function init() {
 
     $(zoomer).hide();
 
-    page.appendChild(viewport);
+    div_viewport.style.cursor = "none";
+    page.appendChild(div_viewport);
+    div_viewport.appendChild(viewport);
     page.appendChild(zoomer);
     page.appendChild(radar);
     page.appendChild(div_server_status);
@@ -279,7 +305,7 @@ function init() {
     $(window).keydown(key_down);
     $(window).keyup(key_up);
     $(window).mouseout(log_event);
-    $(window).mousemove(log_event);
+    $(window).mousemove(mouse_move);
 
     window.setInterval(request_leaderboard,1000);
     window.setInterval(request_latency,1000);
@@ -302,6 +328,7 @@ function update_status() {
     }
     client_status.num_players = "Number Players (client): " + players.length;
     client_status.world_updates = `World Updates: ${world_updates} Player Updates: ${player_updates}`;
+    client_status.skipped_anim = `Skipped Animations: ${skipped_animations}`;
 
     if (socket) {
 	client_status.transport = "Transport: " + socket.io.engine.transport.name;
@@ -319,11 +346,10 @@ function update_status() {
 }
 
 function mouse_move(event) {
-    logger("Mouse Move");
-    logger("Mouse", event.pageX,event.pageY);
-    let pt = get_mouse_pos(viewport, event);
-    logger("MousePos", pt);
-    let new_dir = mouse_pos_to_dir(pt);
+    div_viewport.style.cursor = "default";
+
+    if (clear_cursor_timeout) window.clearTimeout(clear_cursor_timeout);
+    clear_cursor_timeout = window.setTimeout(() => {div_viewport.style.cursor = "none"}, 2500);
 }
 
 function keycode_to_dir(keycode) {
@@ -353,6 +379,9 @@ function key_down(event) {
     else {
 	if (event.which === constant.keycode.r) {
 	    socket.emit('c_request_world_update');
+	}
+	else if (event.which === constant.keycode.i) {
+	    $(div_server_status).toggle();
 	}
 	else if (event.which === constant.keycode.shift) {
 	    $(zoomer).show();
@@ -501,11 +530,13 @@ function init_socket(socket) {
     });
     
     socket.on('s_update_client', function (updates) {
+	world_changed = true;
 	update_players(updates);
     });
 
     socket.on('s_update_world', function (players_from_server) {
 	logger("Got world update");
+	world_changed = true;
 	players = players_from_server;
     });
 
@@ -517,6 +548,8 @@ function init_socket(socket) {
     socket.on('s_update_one_player', function (player) {
 	logger("Got update_one_player");
 	let existing = get_player_by_id(player.id);
+
+	world_changed = true;
 
 	// If we already have this player, update it,
 	// but if we don't have it, add it.
@@ -612,6 +645,14 @@ function animate() {
 
     // Immediately request another frame
     window.requestAnimationFrame( animate );
+
+    if (!world_changed) {
+	skipped_animations++;
+	return;
+    }
+    else {
+	world_changed = false;
+    }
 
     // Time the whole animate process
     anim_timer.start();

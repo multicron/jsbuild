@@ -46,7 +46,7 @@ const netmon = new NetworkMonitor(status => {server_status.network = status});
 
 let players = [];
 
-const tick_timer = new Timer((time,times) => {server_status.tick_game = `tick_game took ${times.join(' ')}`},50);
+const tick_timer = new Timer((timer) => {server_status.tick_game = `tick_game took ${timer.times.join(' ')}`},50);
 
 function get_player_by_id(id) {
     return players.find(p => {return p.id == id});
