@@ -248,44 +248,55 @@ function clear_all_cells() {
     }
 }
 
-io.on('connect', function (socket) {
-    logger('A user connected!', socket.handshake);
-
-    let type = socket.handshake.query.type;
-
-    if (0) {
-	(function () {
-    	    let emit = socket.emit;
-            let onevent = socket.onevent;
-
-    	    socket.emit = function () {
-    		logger('socket.io', 'emit bytes:', arguments[0], JSON.stringify(arguments[1]).length);
-		emit.apply(socket, arguments);
-    	    };
-    	    socket.onevent = function (packet) {
-		logger('socket.io', 'on bytes:', JSON.stringify(packet).length, packet);
-		//		logger('socket.io', 'on', Array.prototype.slice.call(packet.data || []));
-		onevent.apply(socket, arguments);
-    	    };
-	}());
-    }
-    
+function add_newly_connected_player(socket) {
     // Initialize new player
-
-    let connected_player = new Player();
-
-    connected_player.name = "Player " + (player_num++);
-    connected_player.id = socket.id;
-    connected_player.is_robot = false;
-    sockets[connected_player.id] = socket;
-    players.push(connected_player);
-    logger('Player ' + connected_player.id + ' connecting!');
-
+    
+    let new_player = new Player();
+    
+    new_player.name = "Player " + (player_num++);
+    new_player.id = socket.id;
+    new_player.is_robot = false;
+    sockets[new_player.id] = socket;
+    players.push(new_player);
+    logger('Player ' + new_player.id + ' connecting!');
+    
     // Send a world update to the new player
     socket.emit('s_update_world',players);
-
+    
     // Tell all the other players about this player
-    broadcast('s_update_one_player',connected_player);
+    broadcast('s_update_one_player',new_player);
+
+    return new_player;
+}
+
+function patch_socket_io(socket) {
+    (function () {
+    	let emit = socket.emit;
+        let onevent = socket.onevent;
+	
+    	socket.emit = function () {
+    	    logger('socket.io', 'emit bytes:', arguments[0], JSON.stringify(arguments[1]).length);
+	    emit.apply(socket, arguments);
+    	};
+    	socket.onevent = function (packet) {
+	    logger('socket.io', 'on bytes:', JSON.stringify(packet).length, packet);
+	    //		logger('socket.io', 'on', Array.prototype.slice.call(packet.data || []));
+	    onevent.apply(socket, arguments);
+    	};
+    }());
+}
+
+io.on('connect', function (socket) {
+    let connected_player;
+
+    // Not yet used
+    let type = socket.handshake.query.type;
+
+    logger('A user connected!', socket.handshake);
+
+    connected_player = add_newly_connected_player(socket);
+
+    logger(`Connected Player {$connected_player.id}`);
 
     socket.on('c_latency', function (startTime, cb) {
 	cb(startTime);
@@ -309,8 +320,16 @@ io.on('connect', function (socket) {
 	}
     });
 
+    socket.on('c_new_player', function (dash) {
+	connected_player = add_newly_connected_player(socket);
+    });
+
     socket.on('c_change_dash', function (dash) {
 	connected_player.dash = dash;
+    });
+
+    socket.on('c_set_player_name', function (name) {
+	connected_player.name = name;
     });
 
     socket.on('c_request_world_update', function () {

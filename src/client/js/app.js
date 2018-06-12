@@ -96,17 +96,32 @@ function get_player_by_id(id) {
     return players.find(p => {return p.id == id});
 }
 
-function play() {
+// Called when the "Play" button is pressed
+
+function play(event) {
+    if (event) {
+	event.preventDefault();
+    }
+
     socket = io({query:"type=player"});
 
     init_socket(socket);
 
+    let login_name = $("#login_name").val();
+
+    if (login_name !== "") {
+	socket.emit("c_set_player_name",login_name);
+    }
+
     socket.emit("c_request_world_update");
 
     playing = true;
+
 }
 
 function init() {
+
+    setTimeout(() => {
 
     const page = document.body;
 
@@ -172,19 +187,16 @@ function init() {
 				  overflow: "auto"
 				 });
 
-    div_login.innerHTML = html.form({action: "index.html",method: "get"},
+    div_login.innerHTML = html.form({action: "index.html",
+				     method: "get",
+				     id: "login_form"},
 				    "What is your spline's name?",
 				    html.br(),
 				    html.input({type: "text", 
-						name: "spline_name", 
-						id: "worm_name"}),
+						id: "login_name"}),
 				    html.input({type: "submit", 
 						name: "Play", 
 						id: "play_button"}));
-
-    $("#play_button").submit(play);
-
-    $(div_login).hide();
 
     // Canvases
 
@@ -290,21 +302,13 @@ function init() {
     $(zoomer).hide();
 
     div_viewport.style.cursor = "none";
-    page.appendChild(div_viewport);
     div_viewport.appendChild(viewport);
-    page.appendChild(zoomer);
+
+    page.appendChild(div_viewport);
     page.appendChild(radar);
     page.appendChild(div_server_status);
     page.appendChild(div_leaderboard);
     page.appendChild(div_login);
-
-//    page.appendChild( map );
-
-
-    // The board is not displayed (the map shows it shrunk down)
-
-//    page.appendChild( board );
-//    page.appendChild(document.createElement('br'));
 
 
     // Capture keyboard events
@@ -315,11 +319,15 @@ function init() {
     $(window).mouseout(log_event);
     $(window).mousemove(mouse_move);
 
+    $("#login_name").focus();
+    $("#play_button").keydown(play_button_key_down);
+    $("#login_form").submit(play);
+
     window.setInterval(request_leaderboard,1000);
     window.setInterval(request_latency,1000);
     window.setInterval(update_radar,500);
 
-    play();
+    },500);
 }
 
 function request_latency() {
@@ -398,6 +406,13 @@ function key_down(event) {
 	else if (event.which === constant.keycode.space) {
 	    socket.emit('c_change_dash', 1);
 	}
+    }
+}
+
+function play_button_key_down(event) {
+    // Prevent the space bar from pressing the "Play" button
+    if (event.which === constant.keycode.space) {
+	event.preventDefault();
     }
 }
 
@@ -528,6 +543,8 @@ function remove_dead_players() {
 		observer = new Observer(viewport_player);
 		playing = false;
 		$(div_login).show();
+		$("#login_name").val(observer.name);
+		$("#play_button").focus();
 	    }
 	    players.splice(i, 1);
 	} 
@@ -669,6 +686,7 @@ function animate() {
     // Time the whole animate process
     anim_timer.start();
 
+    // Get the player that is connected to the server
     let this_player = get_player_by_id(socket.id);
 
     if (this_player) {

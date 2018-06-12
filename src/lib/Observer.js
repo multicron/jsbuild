@@ -10,6 +10,7 @@ module.exports = class Observer {
 
     constructor(player) {
 	this.id = player.id;
+	this.name = player.name;
 	this.alive = false;
 	this.size = 0;
 	this.dash = 0;
