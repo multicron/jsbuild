@@ -103,6 +103,10 @@ function play(event) {
 	event.preventDefault();
     }
 
+    if (socket) {
+	socket.disconnect();
+    };
+
     socket = io({query:"type=player"});
 
     init_socket(socket);
@@ -117,6 +121,16 @@ function play(event) {
 
     playing = true;
 
+}
+
+function die() {
+    observer = new Observer(viewport_player);
+
+    playing = false;
+
+    $(div_login).show();
+    $("#login_name").val(observer.name);
+    $("#play_button").focus();
 }
 
 function init() {
@@ -195,20 +209,11 @@ function init() {
 				    html.input({type: "text", 
 						id: "login_name"}),
 				    html.input({type: "submit", 
-						name: "Play", 
+						name: "play_button",
+						value: "Play", 
 						id: "play_button"}));
 
     // Canvases
-
-/*
-    test = document.createElement( 'canvas' );
-    test.width = globals.world_dim.width * globals.cellsize;
-    test.height = globals.world_dim.height * globals.cellsize;
-    test_ctx = test.getContext( '2d' );
-    test_ctx.translate(test.width,test.height);
-    test_ctx.rotate(Math.PI/5);
-    draw_axes(test_ctx);
-*/    
 
     // A map of the entire board, same size as the viewport
 
@@ -540,11 +545,7 @@ function remove_dead_players() {
     while (i--) {
 	if (!players[i].alive) {
 	    if (players[i] === viewport_player) {
-		observer = new Observer(viewport_player);
-		playing = false;
-		$(div_login).show();
-		$("#login_name").val(observer.name);
-		$("#play_button").focus();
+		die();
 	    }
 	    players.splice(i, 1);
 	} 
