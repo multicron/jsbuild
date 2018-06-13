@@ -138,11 +138,15 @@ module.exports = class Player {
 	if (!c.alive) {
 	    return false;
 	}
-	// Can't kill anyone for 1 second after spawning
-	if (Date.now() - c.create_time < 1000) {
+	// Can't kill anyone for a while after spawning
+	if (Date.now() - c.create_time < globals.safety_time) {
 	    return false;
 	}
-	
+	// Can't be killed by anyone for a while after spawning
+	if (Date.now() - this.create_time < globals.safety_time) {
+	    return false;
+	}
+
 	return c;
     }
     

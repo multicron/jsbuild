@@ -10,6 +10,7 @@ module.exports = class PlayerUpdate {
 
     constructor(player,num_cells) {
 	this.id = player.id;
+	this.name = player.name;
 	this.alive = player.alive;
 	this.size = player.size;
 	this.dash = player.dash;

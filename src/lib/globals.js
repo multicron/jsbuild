@@ -12,6 +12,7 @@ module.exports = Object.freeze({
     startplayers: 70,
     startsize: 100,
     minplayers: 70,
+    safety_time: 800,
     rotateview: false,
     context_alpha: true,
     world_dim: {

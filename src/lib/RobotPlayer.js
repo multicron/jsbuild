@@ -1,7 +1,7 @@
 const constant = require('constant.js');
 const globals = require('globals.js');
 const Player = require('Player.js');
-const boynames = require('boynames.js');
+const babynames = require('babynames.js');
 
 let robot_counter = 0;
 
@@ -12,7 +12,7 @@ module.exports = class RobotPlayer extends Player{
 	super();
 	this.is_robot = true;
 	this.id = "R"+robot_counter++;
-	this.name = boynames[Math.floor(Math.random()*boynames.length)];
+	this.name = babynames[Math.floor(Math.random()*babynames.length)];
 	this.dash = (Math.random() > 0.6) ? 1 : 0;
 	this.prob_left_right = 0.5;
 	this.prob_random_turn = Math.random() / 8 + 0.02;

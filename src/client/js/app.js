@@ -105,13 +105,13 @@ function play(event) {
 
     if (socket) {
 	socket.disconnect();
-    };
+    }
 
     socket = io({query:"type=player"});
 
     init_socket(socket);
 
-    let login_name = $("#login_name").val();
+    let login_name = $("#login_name").val().substr(0,10);
 
     if (login_name !== "") {
 	socket.emit("c_set_player_name",login_name);
@@ -207,6 +207,7 @@ function init() {
 				    "What is your spline's name?",
 				    html.br(),
 				    html.input({type: "text", 
+						maxlength: 10,
 						id: "login_name"}),
 				    html.input({type: "submit", 
 						name: "play_button",
@@ -850,16 +851,17 @@ function refresh_player(p) {
 
     p.lines = cells_to_lines(p.cells);
 
-    if (0) {
-	for (let i=0; i < (p.cells.length - 1); i++) {
-	    draw_cell(p.cells[i],{h:0,l:50,s:50});	
-	    //	adjust_shade(shade,shade_delta,{h:0,l:50,s:50});
+    if (Date.now() - p.create_time < globals.safety_time) {
+	if (p.flashing===1) {
+	    p.lines.forEach((line) => {draw_line(line,shade)});
+	    p.flashing = 0;
+	}
+	else {
+	    p.flashing = 1;
 	}
     }
     else {
-	for (let j=0; j<p.lines.length; j++) {
-	    draw_line(p.lines[j],shade);
-	}
+	p.lines.forEach((line) => {draw_line(line,shade)});
     }
     
     draw_head(p);
