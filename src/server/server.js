@@ -115,7 +115,7 @@ function tick_game() {
     // Dashing players at scale > 4.0
 
     players.forEach(player => {
-	if (player.dash && player.scale > 4.0 && player.alive > 4.0) {
+	if (player.dash && player.scale > 4.0 && player.alive) {
 	    // This also updates all_cells with new head position,
 	    // but doesn't remove old tail position
 	    player.one_step();
@@ -213,7 +213,7 @@ function update_leaderboard(p) {
     let leaders = [];
 
     for (let i=0; i<players.length; i++) {
-	leaders[i] = new Leader(players[i]);
+	if (players[i].alive) leaders[i] = new Leader(players[i]);
     }
 
     leaders.sort(function (a,b) {

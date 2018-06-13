@@ -107,7 +107,7 @@ function play(event) {
 	socket.disconnect();
     }
 
-    socket = io({query:"type=player"});
+    socket = io({query:{type:"player"}});
 
     init_socket(socket);
 
@@ -134,8 +134,6 @@ function die() {
 }
 
 function init() {
-
-    setTimeout(() => {
 
     const page = document.body;
 
@@ -207,7 +205,7 @@ function init() {
 				    "What is your spline's name?",
 				    html.br(),
 				    html.input({type: "text", 
-						maxlength: 10,
+						maxlength: 20,
 						id: "login_name"}),
 				    html.input({type: "submit", 
 						name: "play_button",
@@ -307,7 +305,6 @@ function init() {
 
     $(zoomer).hide();
 
-    div_viewport.style.cursor = "none";
     div_viewport.appendChild(viewport);
 
     page.appendChild(div_viewport);
@@ -333,7 +330,7 @@ function init() {
     window.setInterval(request_latency,1000);
     window.setInterval(update_radar,500);
 
-    },500);
+    mouse_move();
 }
 
 function request_latency() {

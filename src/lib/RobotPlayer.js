@@ -12,10 +12,30 @@ module.exports = class RobotPlayer extends Player{
 	super();
 	this.is_robot = true;
 	this.id = "R"+robot_counter++;
-	this.name = babynames[Math.floor(Math.random()*babynames.length)];
+	this.name = this.choose_random_name();
 	this.dash = (Math.random() > 0.6) ? 1 : 0;
 	this.prob_left_right = 0.5;
 	this.prob_random_turn = Math.random() / 8 + 0.02;
+    }
+
+    choose_random_name() {
+	let name = babynames[Math.floor(Math.random()*babynames.length)];
+
+	if (Math.random() < 0.2) {
+	    name = name + " " + String.fromCharCode(65 + Math.floor(Math.random() * 26));
+	    if (Math.random() < 0.3) {
+		name = name + ".";
+	    }
+	}
+
+	if (Math.random() < 0.1) {
+	    name = name.toUpperCase();
+	    }
+	else if (Math.random() < 0.4) {
+	    name = name.toLowerCase();
+	}
+
+	return name;
     }
 
     turn() {
