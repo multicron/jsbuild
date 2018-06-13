@@ -18,7 +18,7 @@ module.exports = class Leader {
 	this.dash = player.dash;
 	this.cellcount = player.cells.length;
 	this.shade = player.shade_min;
-	this.score = Math.floor(player.cells.length * 100 + (now - player.create_time) / 1000);
-	this.add_score = Math.floor(player.size * 100 + (now - player.create_time) / 1000) - this.score;
+	this.score = player.score;
+	this.pending_score = player.pending_score;
     }
 };

@@ -43,6 +43,15 @@ module.exports = class Player {
 	this.first_cell = 0;
 	this.last_cell = 0;
 	this.lines = [];
+	this.killed_by = undefined;
+    }
+
+    get score() {
+    	return Math.floor(this.cells.length * 100 + (Date.now() - this.create_time) / 1000);
+    }
+
+    get pending_score() {
+	return Math.floor((this.size - this.cells.length) * 100);
     }
 
     get_collision_object(x,y) {
@@ -96,6 +105,8 @@ module.exports = class Player {
     
     
     award_collision(killed,killer) {
+	killed.killed_by = killer.name;
+
 	let awarded = killed.cells.length - 90;
 	
 	if (awarded > 0) {

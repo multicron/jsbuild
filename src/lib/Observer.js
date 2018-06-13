@@ -13,6 +13,7 @@ module.exports = class Observer {
 	this.name = player.name;
 	this.alive = false;
 	this.size = 0;
+	this.score = player.score;
 	this.dash = 0;
 	this.position = {
 	    x: player.position.x,
@@ -24,5 +25,6 @@ module.exports = class Observer {
 	    l: player.shade.l
 	};
 	this.scale  = player.scale;
+	this.killed_by = player.killed_by;
     }
 };

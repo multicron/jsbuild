@@ -129,7 +129,10 @@ function die() {
 
     playing = false;
 
+    let aplayer = new Player();
+
     $(div_login).show();
+    $("#killed_by").text(`Your high score was ${viewport_player.score}`).show();
     $("#login_name").val(observer.name);
     $("#play_button").focus();
 }
@@ -201,27 +204,29 @@ function init() {
 				 });
 
     div_login.innerHTML = html.JOIN(html.h1("splines.io"),
-				   html.div({style: html.CSS({width: "90%",
-							      height: "30%",
-							      top: 0,
-							      left: 0,
-							      bottom: 0,
-							      right: 0,
-							      margin: "auto",
-							      "background-color": "white", 
-							     })},
-					    html.form({action: "index.html",
-						       method: "get",
-						       id: "login_form"},
-						      "Player name?",
-						      html.br(),
-						      html.input({type: "text", 
-								  maxlength: globals.max_name_length,
-								  id: "login_name"}),
-						      html.input({type: "submit", 
-								  name: "play_button",
-								  value: "Play", 
-								  id: "play_button"}))));
+				    html.h2({id: "killed_by"},"You were killed"),
+				    html.div({style: html.CSS({width: "90%",
+							       height: "30%",
+							       top: 0,
+							       left: 0,
+							       bottom: 0,
+							       right: 0,
+							       margin: "auto",
+							       "background-color": "white", 
+							      })},
+					     html.br(),
+					     html.form({action: "index.html",
+							method: "get",
+							id: "login_form"},
+						       html.p(html.h3("Player name?")),
+						       html.input({type: "text", 
+								   maxlength: globals.max_name_length,
+								   id: "login_name"}),
+						       html.input({type: "submit", 
+								   name: "play_button",
+								   value: "Play", 
+								   id: "play_button"})),
+					     html.br()));
     
     // Canvases
 
@@ -336,6 +341,7 @@ function init() {
     $("#login_name").focus();
     $("#play_button").keydown(play_button_key_down);
     $("#login_form").submit(play);
+    $("#killed_by").hide();
 
     window.setInterval(request_leaderboard,1000);
     window.setInterval(request_latency,1000);
@@ -575,7 +581,14 @@ function init_socket(socket) {
     socket.on('s_update_world', function (players_from_server) {
 	logger("Got world update");
 	world_changed = true;
-	players = players_from_server;
+	// Items in the JSON Array of objects received from the server are not instances of Player.
+	let new_world = [];
+	players_from_server.forEach((player) => {
+	    let new_player = new Player();
+	    Object.assign(new_player,player);
+	    new_world.push(new_player);
+	});
+	players = new_world;
     });
 
     socket.on('s_update_leaderboard', function (leaders) {
@@ -598,7 +611,10 @@ function init_socket(socket) {
 	}
 	else {
 	    player_adds++;
-	    players.push(player);
+	    // The data received from socket.io is not an instance of Player
+	    let new_player = new Player();
+	    Object.assign(new_player,player);
+	    players.push(new_player);
 	}
     });
 
@@ -631,10 +647,12 @@ function fillin_leaderboard(leaders) {
 		{color: 'hsl('+p.shade.h+','+p.shade.l+'%,'+p.shade.s+'%)',
 		 width: "90%"}
 	    )},p.name),
-	    html.td({align: "right"},p.add_score > 0 ? p.add_score + "+" + p.score : p.score)
+	    html.td({align: "right"},p.pending_score > 0 ? p.pending_score + "+" + p.score : p.score)
 	);
     }));
 }
+
+
 
 function draw_axes(ctx) {
     for (let x = -1000; x <= 1000; x+=10) {
