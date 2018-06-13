@@ -46,8 +46,8 @@ module.exports = class Player {
     }
 
     get_collision_object(x,y) {
-	if (x <=0 || 
-	    y <=0 || 
+	if (x < 0 || 
+	    y < 0 || 
 	    x >= globals.world_dim.width ||
 	    y >= globals.world_dim.height) {
 	    return false;
