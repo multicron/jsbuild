@@ -13,6 +13,8 @@ debug("server.js starting up with NODE_PATH " + process.env.NODE_PATH );
 const globals = require('globals.js');
 const constant = require('constant.js');
 
+const Pager = require("Pager.js");
+
 const Player = require('Player.js');
 const RobotPlayer = require('RobotPlayer.js');
 
@@ -131,7 +133,7 @@ function tick_game() {
 	logger("Sending s_update_one_player");
 	broadcast('s_update_one_player',player);
     }
-    server_status.num_players = `Number Players (server): ${players.length}`;
+    server_status.num_players = `Number Players (server): ${players.length} Connected sockets: ${Object.keys(sockets).filter((k) => sockets[k].connected).length}`;
 
     tick_timer.end();
 }
@@ -224,7 +226,9 @@ function update_leaderboard(p) {
 	leaders.length = 8;
     }
 
-    if (leaders.filter(function (a) {return a.id===p.id}).length <= 0) {
+    // Add the player's own score if not already on the board
+
+    if (p.alive && leaders.filter(function (a) {return a.id===p.id}).length <= 0) {
 	leaders[8] = new Leader(p);
     }
 
@@ -251,9 +255,11 @@ function clear_all_cells() {
 function add_newly_connected_player(socket) {
     // Initialize new player
     
+    let player_name = socket.handshake.query.name || "Player " + (player_num++);
+
     let new_player = new Player();
     
-    new_player.name = "Player " + (player_num++);
+    new_player.name = player_name;
     new_player.id = socket.id;
     new_player.is_robot = false;
     sockets[new_player.id] = socket;
@@ -265,6 +271,10 @@ function add_newly_connected_player(socket) {
     
     // Tell all the other players about this player
     broadcast('s_update_one_player',new_player);
+
+    if (player_name !== "Bluby") {
+	new Pager().send(`Player ${player_name} has started playing.`);
+    }
 
     return new_player;
 }
@@ -320,9 +330,9 @@ io.on('connect', function (socket) {
 	}
     });
 
-    socket.on('c_new_player', function (dash) {
-	connected_player = add_newly_connected_player(socket);
-    });
+    // socket.on('c_new_player', function (dash) {
+    // 	connected_player = add_newly_connected_player(socket);
+    // });
 
     socket.on('c_change_dash', function (dash) {
 	connected_player.dash = dash;

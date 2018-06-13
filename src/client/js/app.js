@@ -107,11 +107,12 @@ function play(event) {
 	socket.disconnect();
     }
 
-    socket = io({query:{type:"player"}});
+    let login_name = $("#login_name").val().substr(0,globals.max_name_length);
+
+    socket = io({query:{type:"player",
+			name:login_name}});
 
     init_socket(socket);
-
-    let login_name = $("#login_name").val().substr(0,10);
 
     if (login_name !== "") {
 	socket.emit("c_set_player_name",login_name);
@@ -185,7 +186,7 @@ function init() {
     // A div for the entering/exiting overlay
 
     div_login.style.cssText = html.CSS({"background-color": "blue",
-				  opacity: "0.6",
+				  opacity: "0.8",
 				  display: "inline-block",
 				  position: "fixed",
 			          "text-align": "center",		
@@ -199,19 +200,29 @@ function init() {
 				  overflow: "auto"
 				 });
 
-    div_login.innerHTML = html.form({action: "index.html",
-				     method: "get",
-				     id: "login_form"},
-				    "What is your spline's name?",
-				    html.br(),
-				    html.input({type: "text", 
-						maxlength: 20,
-						id: "login_name"}),
-				    html.input({type: "submit", 
-						name: "play_button",
-						value: "Play", 
-						id: "play_button"}));
-
+    div_login.innerHTML = html.JOIN(html.h1("splines.io"),
+				   html.div({style: html.CSS({width: "90%",
+							      height: "30%",
+							      top: 0,
+							      left: 0,
+							      bottom: 0,
+							      right: 0,
+							      margin: "auto",
+							      "background-color": "white", 
+							     })},
+					    html.form({action: "index.html",
+						       method: "get",
+						       id: "login_form"},
+						      "Player name?",
+						      html.br(),
+						      html.input({type: "text", 
+								  maxlength: globals.max_name_length,
+								  id: "login_name"}),
+						      html.input({type: "submit", 
+								  name: "play_button",
+								  value: "Play", 
+								  id: "play_button"}))));
+    
     // Canvases
 
     // A map of the entire board, same size as the viewport

@@ -123,6 +123,7 @@ let Phyper = (function () {
     });
     
     this.CSS = (function(...args){return _process_css(...args);});
+    this.JOIN = (function(...args){return args.join(" ");});
 
     this.a = (function(...args){return _process("a",1,...args);});
     this.abbr = (function(...args){return _process("abbr",1,...args);});

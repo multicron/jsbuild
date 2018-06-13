@@ -21,9 +21,9 @@ module.exports = class RobotPlayer extends Player{
     choose_random_name() {
 	let name = babynames[Math.floor(Math.random()*babynames.length)];
 
-	if (Math.random() < 0.2) {
+	if (Math.random() < 0.1) {
 	    name = name + " " + String.fromCharCode(65 + Math.floor(Math.random() * 26));
-	    if (Math.random() < 0.3) {
+	    if (Math.random() < 0.1) {
 		name = name + ".";
 	    }
 	}
