@@ -116,13 +116,13 @@ function tick_game() {
 
     // Dashing players at scale > 4.0
 
-    players.forEach(player => {
-	if (player.dash && player.scale > 4.0 && player.alive) {
-	    // This also updates all_cells with new head position,
-	    // but doesn't remove old tail position
-	    player.one_step();
-	}
-    });
+    // players.forEach(player => {
+    // 	if (player.dash && player.scale > 4.0 && player.alive) {
+    // 	    // This also updates all_cells with new head position,
+    // 	    // but doesn't remove old tail position
+    // 	    player.one_step();
+    // 	}
+    // });
 
     update_clients();
 

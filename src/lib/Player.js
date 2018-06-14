@@ -199,7 +199,7 @@ module.exports = class Player {
     }
 
     update_viewport_scale() {
-	this.scale = 1 + Math.min(4,((this.size - globals.startsize) / 1000));
+	this.scale = 1 + Math.min(5,((this.size - globals.startsize) / 1000));
     }
 
     update_shade() {

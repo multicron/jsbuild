@@ -361,14 +361,14 @@ function update_status() {
     let status = "";
 
     if (viewport_player) {
-	client_status.scale = "Scale: " + viewport_player.scale.toPrecision(2) + " Dash: " + viewport_player.dash;
+	client_status.scale = `Scale: ${viewport_player.scale.toPrecision(2)} Dash: ${viewport_player.dash}`;
     }
-    client_status.num_players = "Number Players (client): " + players.length;
+    client_status.num_players = `Number Players (client): ${players.length}`;
     client_status.world_updates = `World Updates: ${world_updates} Player Updates: ${player_updates} Player Adds: ${player_adds}`;
     client_status.skipped_anim = `Skipped Animations: ${skipped_animations}`;
 
     if (socket) {
-	client_status.transport = "Transport: " + socket.io.engine.transport.name;
+	client_status.transport = `Transport: ${socket.io.engine.transport.name}`;
     }
 
     for (let category in server_status) {
@@ -646,8 +646,8 @@ function fillin_leaderboard(leaders) {
 	    html.td({style: html.CSS(
 		{color: 'hsl('+p.shade.h+','+p.shade.l+'%,'+p.shade.s+'%)',
 		 width: "90%"}
-	    )},p.name),
-	    html.td({align: "right"},p.pending_score > 0 ? p.pending_score + "+" + p.score : p.score)
+	    )},p.name,p.pending_score > 0 ? "+" + p.pending_score : ""),
+	    html.td({align: "right"},p.score)
 	);
     }));
 }
@@ -1010,6 +1010,10 @@ function draw_name(p) {
     board_ctx.font = Math.floor(12*scale) + 'px Verdana';
 
     let name = p.name;
+
+    if (p.pending_score > 0) {
+	name = p.name + ('+') + p.pending_score;
+    }
 
     // if (p.cells.length === p.size) {
     // 	name += "(" + p.size + ")";
