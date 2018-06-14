@@ -14,6 +14,7 @@ const Player = require("Player.js");
 const Observer = require("Observer.js");
 const Timer = require("Timer.js");
 const crypto = require("crypto");
+const PowerUp = require("PowerUp.js");
 
 const html = require("Phyper.js");
 
@@ -73,6 +74,7 @@ let playing = false;
 
 // The world
 let players = [];
+let powerups = [];
 
 // Status messages and statistics
 let server_status = {};
@@ -591,6 +593,19 @@ function init_socket(socket) {
 	players = new_world;
     });
 
+    socket.on('s_update_powerups', function (powerups_from_server) {
+	logger("Got update_powerups");
+
+	let new_powerups = [];
+
+	powerups_from_server.forEach((powerup) => {
+	    let new_powerup = new PowerUp();
+	    Object.assign(new_powerup,powerup);
+	    new_powerups.push(new_powerup);
+	});
+	powerups = new_powerups;
+    });
+
     socket.on('s_update_leaderboard', function (leaders) {
 	logger("Got leaderboard update");
 	div_leaderboard.innerHTML = fillin_leaderboard(leaders);
@@ -736,6 +751,10 @@ function animate() {
 	refresh_player(player);
     });
 
+    powerups.forEach(powerup => {
+	refresh_powerup(powerup);
+    });
+
     refresh_timer.end();
 
     players.forEach(player => {
@@ -859,6 +878,20 @@ function update_radar() {
 			radar.height
 		       );
 }
+
+function refresh_powerup(powerup) {
+    let cell = powerup.position;
+
+    let color = globals.headcolor;
+
+    board_ctx.fillStyle = color;
+
+    board_ctx.strokeRect((cell.x*globals.cellsize),
+			 (cell.y*globals.cellsize),
+			 globals.cellsize,
+			 globals.cellsize);
+}
+
 
 function refresh_player(p) {
 //    adjust_shade(p.shade,p.shade_delta,p.shade);

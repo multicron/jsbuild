@@ -12,6 +12,7 @@ module.exports = Object.freeze({
     startplayers: 70,
     startsize: 100,
     minplayers: 70,
+    minpowerups: 70,
     safety_time: 800,
     max_name_length: 20,
     rotateview: false,

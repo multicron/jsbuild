@@ -20,6 +20,7 @@ const RobotPlayer = require('RobotPlayer.js');
 
 const PlayerUpdate = require('PlayerUpdate.js');
 const Leader = require('Leader.js');
+const PowerUp = require('PowerUp.js');
 
 const html = require("Phyper.js");
 
@@ -47,6 +48,7 @@ let server_status = {};
 const netmon = new NetworkMonitor(status => {server_status.network = status});
 
 let players = [];
+let powerups = [];
 
 const tick_timer = new Timer((timer) => {server_status.tick_game = `tick_game took ${timer.times.join(' ')}`},50);
 
@@ -60,8 +62,15 @@ function add_robot() {
     return player;
 }
 
-function populate_all_cells(p) {
+function add_powerup() {
+    let powerup = new PowerUp();
+    powerups.push(powerup);
+    return powerup;
+}
+
+function populate_all_cells() {
     let count = 0;
+    let count2 = 0;
 
     for (let i=0 ; i<players.length; i++) {
 	let p = players[i];
@@ -72,7 +81,10 @@ function populate_all_cells(p) {
 	    }
 	}
     }
-    server_status.cell_count = `Total Cells: ${count}`;
+    
+//    powerups.forEach((powerup) => {all_cells[powerup.position.x][powerup.position.y] = powerup; count2++;});
+
+    server_status.cell_count = `Total Cells: ${count} Total Power Ups: ${count2}`;
 }
 
 function remove_dead_players() {
@@ -80,6 +92,15 @@ function remove_dead_players() {
     while (i--) {
 	if (!players[i].alive) {
 	    players.splice(i, 1);
+	} 
+    }
+}
+
+function remove_used_powerups() {
+    let i = powerups.length;
+    while (i--) {
+	if (powerups[i].used) {
+	    powerups.splice(i, 1);
 	} 
     }
 }
@@ -98,8 +119,6 @@ function tick_game() {
 
     players.forEach(player => {
 	if (player.alive) {
-	    // This also updates all_cells with new head position,
-	    // but doesn't remove old tail position
 	    player.one_step();
 	}
     });
@@ -108,25 +127,22 @@ function tick_game() {
 
     players.forEach(player => {
 	if (player.dash && player.alive) {
-	    // This also updates all_cells with new head position,
-	    // but doesn't remove old tail position
 	    player.one_step();
 	}
     });
 
     // Dashing players at scale > 4.0
 
-    // players.forEach(player => {
-    // 	if (player.dash && player.scale > 4.0 && player.alive) {
-    // 	    // This also updates all_cells with new head position,
-    // 	    // but doesn't remove old tail position
-    // 	    player.one_step();
-    // 	}
-    // });
+    players.forEach(player => {
+    	if (player.dash && player.alive && player.scale > 4.0) {
+    	    player.one_step();
+    	}
+    });
 
     update_clients();
 
     remove_dead_players();
+    remove_used_powerups();
 
     while (players.length < globals.minplayers) {
 	let player = add_robot();
@@ -134,6 +150,13 @@ function tick_game() {
 	broadcast('s_update_one_player',player);
     }
     server_status.num_players = `Number Players (server): ${players.length} Connected sockets: ${Object.keys(sockets).filter((k) => sockets[k].connected).length}`;
+
+    // while (powerups.length < globals.minpowerups) {
+    // 	let powerup = add_powerup();
+    // }
+    
+    // broadcast('s_update_powerups',powerups);
+    // logger("Sending s_update_powerups");
 
     tick_timer.end();
 }
@@ -182,10 +205,11 @@ function update_clients() {
     let updates = [];
 
     players.forEach(player => {
-	updates.push(new PlayerUpdate(player,2));
+	updates.push(new PlayerUpdate(player,3));
     });
 
     broadcast('s_update_client',updates);
+    broadcast('s_update_powerups',powerups);
 
 }
 
@@ -246,9 +270,9 @@ function init_all_cells() {
 
 function clear_all_cells() {
     for (let i=0;i<globals.world_dim.width;i++) {
-	for (let j=0;j<globals.world_dim.height;j++) {
-	    all_cells[i][j]=0;
-	}
+    	for (let j=0;j<globals.world_dim.height;j++) {
+    	    all_cells[i][j]=0;
+    	}
     }
 }
 

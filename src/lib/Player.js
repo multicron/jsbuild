@@ -1,5 +1,7 @@
 const constant = require('constant.js');
 const globals = require('globals.js');
+const PowerUp = require('PowerUp.js');
+const debug = require('debug')('splines');
 
 // Player Constructor
 
@@ -88,17 +90,32 @@ module.exports = class Player {
 	    this.alive = 0;
 	}
 	else {
-	    let killer = this.check_collision();
-	    if (killer) {
-		this.award_collision(this,killer);
+	    let collision = this.check_collision();
+	    
+	    if (collision) {
+		this.award_collision(this,collision);
 		this.alive = 0;
+
+		// if (collision.is_powerup) {
+		//     debug("Got powerup collision");
+		//     collision.used = 1;
+		// }
+		// else if (collision instanceof Player) {
+		//     debug("Got Player Collision");
+		//     this.award_collision(this,collision);
+		//     this.alive = 0;
+		// }
+		// else {
+		//     debug("Got some other collision");
+		// }
 	    }
 	}
 
-	// Update all_cells with new position of head
 
 	if (this.alive) {
+	    // Update all_cells with new position of head
 	    global.all_cells[this.position.x][this.position.y] = this;
+
 	    this.shift_player();
 	}
     }
@@ -140,7 +157,10 @@ module.exports = class Player {
     check_collision() {
 	let c = this.get_collision_object(this.position.x,this.position.y);
 	
-	if (c===false) {
+	if (c===undefined) {
+	    return false;
+	}
+	if (c===0) {
 	    return false;
 	}
 	if (c === this) {

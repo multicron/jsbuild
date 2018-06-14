@@ -18,5 +18,9 @@ module.exports = {
 	shift: 16,
 	control: 17,
 	alt: 18
+    },
+    powerup: {
+	scale: 1,
+	double: 2
     }
 };
