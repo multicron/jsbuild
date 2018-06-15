@@ -548,6 +548,7 @@ function update_players (updates) {
 	    player.position = update.position;
 	    player.shade = update.shade;
 	    player.scale = update.scale;
+	    player.powerups = update.powerups;
 	    
 	    update_player_cells(player,update);
 	}
@@ -888,10 +889,31 @@ function refresh_powerup(powerup) {
 
     board_ctx.fillStyle = color;
 
-    board_ctx.strokeRect((cell.x*globals.cellsize),
-			 (cell.y*globals.cellsize),
-			 globals.cellsize,
-			 globals.cellsize);
+    if (powerup.type === constant.powerup.multiplier) {
+	board_ctx.beginPath();
+	board_ctx.moveTo((cell.x)*globals.cellsize,
+			 (cell.y)*globals.cellsize);
+	board_ctx.lineTo((cell.x+1)*globals.cellsize,
+			 (cell.y+1)*globals.cellsize);
+	board_ctx.moveTo((cell.x+1)*globals.cellsize,
+			 (cell.y)*globals.cellsize);
+	board_ctx.lineTo((cell.x)*globals.cellsize,
+			 (cell.y+1)*globals.cellsize);
+	board_ctx.stroke();
+    }
+    else if (powerup.type === constant.powerup.scale) {
+	board_ctx.beginPath();
+	board_ctx.moveTo((cell.x+0.5)*globals.cellsize,
+			 (cell.y)*globals.cellsize);
+	board_ctx.lineTo((cell.x+0.5)*globals.cellsize,
+			 (cell.y+1)*globals.cellsize);
+	board_ctx.moveTo((cell.x)*globals.cellsize,
+			 (cell.y+0.5)*globals.cellsize);
+	board_ctx.lineTo((cell.x+1)*globals.cellsize,
+			 (cell.y+0.5)*globals.cellsize);
+	board_ctx.stroke();
+    }
+
 }
 
 

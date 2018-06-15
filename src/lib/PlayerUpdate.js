@@ -28,5 +28,6 @@ module.exports = class PlayerUpdate {
 	this.first_cell = player.first_cell; // Number of times "shift" has been called
 	this.last_cell = player.last_cell; // Number of times "push" has been called
 	this.last_cells = player.cells.slice(0 - num_cells); // Last N cells
+	this.powerups = player.powerups;
     }
 };

@@ -1,3 +1,5 @@
+// jshint lastsemic: true
+
 const constant = require('constant.js');
 const globals = require('globals.js');
 const PowerUp = require('PowerUp.js');
@@ -45,6 +47,7 @@ module.exports = class Player {
 	this.first_cell = 0;
 	this.last_cell = 0;
 	this.lines = [];
+	this.powerups = [];
 	this.killed_by = undefined;
     }
 
@@ -97,7 +100,7 @@ module.exports = class Player {
 	    if (hit_object) {
 		if (hit_object instanceof PowerUp) {
 		    debug("Got PowerUp collision");
-		    this.award_powerup(this,hit_object);
+		    this.award_powerup(hit_object);
 		    hit_object.alive = 0;
 		}
 		else if (hit_object instanceof Player) {
@@ -119,7 +122,6 @@ module.exports = class Player {
 	}
     }
     
-    
     award_collision(killer) {
 	this.killed_by = killer.name;
 
@@ -128,12 +130,16 @@ module.exports = class Player {
 	if (awarded > 0) {
 	    killer.size += awarded;
 	}
+	if (killer.powerups.some((powerup) => powerup.type === constant.powerup.multiplier)) {
+	    killer.size += awarded;
+	}
 	
 	this.size = 1;
     }
 
     award_powerup(powerup) {
-//	this.powerups.push(powerup);
+	powerup.start_time = Date.now();
+	this.powerups.push(powerup);
     }
 
     shift_player() {
@@ -223,6 +229,9 @@ module.exports = class Player {
 
     update_viewport_scale() {
 	this.scale = 1 + Math.min(5,((this.size - globals.startsize) / 1000));
+	if (this.scale <= 5 && this.powerups.some((powerup) => powerup.type === constant.powerup.scale) > 0) {
+	    this.scale = this.scale + 0.5;
+	}
     }
 
     update_shade() {

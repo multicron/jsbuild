@@ -16,7 +16,7 @@ module.exports = Object.freeze({
     safety_time: 800,
     max_name_length: 20,
     rotateview: false,
-    context_alpha: true,
+    context_alpha: false,
     world_dim: {
 	width: 500,
 	height: 350,

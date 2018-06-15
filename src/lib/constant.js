@@ -21,6 +21,6 @@ module.exports = {
     },
     powerup: {
 	scale: 1,
-	double: 2
+	multiplier: 2
     }
 };

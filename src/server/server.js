@@ -21,6 +21,7 @@ const RobotPlayer = require('RobotPlayer.js');
 
 const PlayerUpdate = require('PlayerUpdate.js');
 const Leader = require('Leader.js');
+
 const PowerUp = require('PowerUp.js');
 
 const html = require("Phyper.js");
@@ -100,6 +101,18 @@ function remove_dead_powerups() {
     }
 }
 
+function expire_player_powerups() {
+    players.forEach((player) => {
+	let powerups = player.powerups;
+	let i = powerups.length;
+	while (i--) {
+	    if (powerups[i].start_time + powerups[i].duration < Date.now()) {
+		powerups.splice(i, 1);
+	    } 
+	}
+    });
+}
+
 function tick_game() {
 
     tick_timer.start();
@@ -138,6 +151,7 @@ function tick_game() {
 
     remove_dead_players();
     remove_dead_powerups();
+    expire_player_powerups();
 
     while (players.length < globals.minplayers) {
 	let player = add_robot();
@@ -291,9 +305,9 @@ function add_newly_connected_player(socket) {
     // Tell all the other players about this player
     broadcast('s_update_one_player',new_player);
 
-    if (player_name !== "Bluby") {
-	new Pager().send(`Player ${player_name} has started playing.`);
-    }
+    // if (player_name !== "Bluby") {
+    // 	new Pager().send(`Player ${player_name} has started playing.`);
+    // }
 
     return new_player;
 }
@@ -325,7 +339,7 @@ io.on('connect', function (socket) {
 
     connected_player = add_newly_connected_player(socket);
 
-    debug(`Connected Player {$connected_player.id}`);
+    debug(`Connected Player ${connected_player.id}`);
 
     socket.on('c_latency', function (startTime, cb) {
 	cb(startTime);
