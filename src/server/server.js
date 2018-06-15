@@ -7,6 +7,7 @@ const basic_auth = require('express-basic-auth');
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const debug = require('debug')('splines');
+const debug_socket = require('debug')('splines:socket');
 
 debug("server.js starting up with NODE_PATH " + process.env.NODE_PATH );
 
@@ -27,12 +28,6 @@ const html = require("Phyper.js");
 const NetworkMonitor = require("NetworkMonitor.js");
 
 const Timer = require("Timer.js");
-
-// Define "logger"
-let logger = global.logger = function(...args) {debug(...args)};
-
-//disable logging by uncommenting the next line
-//logger = (() => {});
 
 let auth = basic_auth({users: { 'user': 'password' }});
 //app.use(auth);
@@ -82,7 +77,7 @@ function populate_all_cells() {
 	}
     }
     
-//    powerups.forEach((powerup) => {all_cells[powerup.position.x][powerup.position.y] = powerup; count2++;});
+    powerups.forEach((powerup) => {all_cells[powerup.position.x][powerup.position.y] = powerup; count2++;});
 
     server_status.cell_count = `Total Cells: ${count} Total Power Ups: ${count2}`;
 }
@@ -96,10 +91,10 @@ function remove_dead_players() {
     }
 }
 
-function remove_used_powerups() {
+function remove_dead_powerups() {
     let i = powerups.length;
     while (i--) {
-	if (powerups[i].used) {
+	if (!powerups[i].alive) {
 	    powerups.splice(i, 1);
 	} 
     }
@@ -142,32 +137,32 @@ function tick_game() {
     update_clients();
 
     remove_dead_players();
-    remove_used_powerups();
+    remove_dead_powerups();
 
     while (players.length < globals.minplayers) {
 	let player = add_robot();
-	logger("Sending s_update_one_player");
+	debug_socket("Sending s_update_one_player");
 	broadcast('s_update_one_player',player);
     }
     server_status.num_players = `Number Players (server): ${players.length} Connected sockets: ${Object.keys(sockets).filter((k) => sockets[k].connected).length}`;
 
-    // while (powerups.length < globals.minpowerups) {
-    // 	let powerup = add_powerup();
-    // }
+    while (powerups.length < globals.minpowerups) {
+    	let powerup = add_powerup();
+    }
     
-    // broadcast('s_update_powerups',powerups);
-    // logger("Sending s_update_powerups");
+    broadcast('s_update_powerups',powerups);
+    debug_socket("Sending s_update_powerups");
 
     tick_timer.end();
 }
 
 function volatile_broadcast(name,data) {
-//    logger("io.sockets","broadcast",name,"bytes: ",JSON.stringify(data).length);
+//    debug_socket("io.sockets","broadcast",name,"bytes: ",JSON.stringify(data).length);
     io.sockets.volatile.emit(name,data);
 }
 
 function broadcast(name,data) {
-//    logger("io.sockets","broadcast",name,"bytes: ",JSON.stringify(data).length);
+//    debug_socket("io.sockets","broadcast",name,"bytes: ",JSON.stringify(data).length);
     io.sockets.emit(name,data);
 }
 
@@ -179,7 +174,7 @@ function player_in_client_viewport(player,client) {
     let client_max_x = client_min_x + (client.scale*globals.view_dim.width/2) + 1;
     let client_max_y = client_min_y + (client.scale*globals.view_dim.height/2) + 1;
 
-    logger(`Client can clip out anything not in ${client_min_x},${client_min_y},${client_max_x},${client_max_y}`);
+    debug(`Client can clip out anything not in ${client_min_x},${client_min_y},${client_max_x},${client_max_y}`);
 
     let player_max_x = 0;
     let player_max_y = 0;
@@ -221,7 +216,7 @@ function filtered_update_clients() {
 	let updates = [];
 	players.forEach(player => {
 	    if (player_in_client_viewport(player,client)) {
-		logger(`Pushing update for client ${client.name}, player ${player.name}`);
+		debug(`Pushing update for client ${client.name}, player ${player.name}`);
 		updates.push(new PlayerUpdate(player,2));
 	    }
 	});
@@ -231,7 +226,7 @@ function filtered_update_clients() {
 }
 
 function send_server_status() {
-    logger(server_status);
+    debug_socket(server_status);
     broadcast('s_server_status',server_status);
 }
 
@@ -288,7 +283,7 @@ function add_newly_connected_player(socket) {
     new_player.is_robot = false;
     sockets[new_player.id] = socket;
     players.push(new_player);
-    logger('Player ' + new_player.id + ' connecting!');
+    debug('Player ' + new_player.id + ' connecting!');
     
     // Send a world update to the new player
     socket.emit('s_update_world',players);
@@ -309,12 +304,12 @@ function patch_socket_io(socket) {
         let onevent = socket.onevent;
 	
     	socket.emit = function () {
-    	    logger('socket.io', 'emit bytes:', arguments[0], JSON.stringify(arguments[1]).length);
+    	    debug_socket('socket.io', 'emit bytes:', arguments[0], JSON.stringify(arguments[1]).length);
 	    emit.apply(socket, arguments);
     	};
     	socket.onevent = function (packet) {
-	    logger('socket.io', 'on bytes:', JSON.stringify(packet).length, packet);
-	    //		logger('socket.io', 'on', Array.prototype.slice.call(packet.data || []));
+	    debug_socket('socket.io', 'on bytes:', JSON.stringify(packet).length, packet);
+	    //		debug_socket('socket.io', 'on', Array.prototype.slice.call(packet.data || []));
 	    onevent.apply(socket, arguments);
     	};
     }());
@@ -326,18 +321,18 @@ io.on('connect', function (socket) {
     // Not yet used
     let type = socket.handshake.query.type;
 
-    logger('A user connected!', socket.handshake);
+    debug('A user connected!', socket.handshake);
 
     connected_player = add_newly_connected_player(socket);
 
-    logger(`Connected Player {$connected_player.id}`);
+    debug(`Connected Player {$connected_player.id}`);
 
     socket.on('c_latency', function (startTime, cb) {
 	cb(startTime);
     }); 
 
     socket.on('c_change_direction', function (new_dir) {
-        logger('c_change_direction ' + connected_player.id + ' changing direction to ',new_dir);
+        debug_socket('c_change_direction ' + connected_player.id + ' changing direction to ',new_dir);
 
 	let old_dir = connected_player.dir;
 
@@ -345,11 +340,11 @@ io.on('connect', function (socket) {
 	    // Do nothing
 	}
 	else if ((old_dir!=constant.direction.left && old_dir!=constant.direction.right) && (new_dir==constant.direction.left || new_dir==constant.direction.right)) {
-            logger('Changing direction to vertical',new_dir);
+            debug('Changing direction to vertical',new_dir);
 	    connected_player.dir = new_dir;
 	}
 	else if ((old_dir!=constant.direction.up && old_dir!=constant.direction.down) && (new_dir==constant.direction.up || new_dir==constant.direction.down)) {
-            logger('Changing direction to horizontal',new_dir);
+            debug('Changing direction to horizontal',new_dir);
 	    connected_player.dir = new_dir;
 	}
     });
@@ -367,27 +362,27 @@ io.on('connect', function (socket) {
     });
 
     socket.on('c_request_world_update', function () {
-        logger('c_request_world_update from ' + connected_player.id);
+        debug_socket('c_request_world_update from ' + connected_player.id);
 	socket.emit('s_update_world',players);
     });
 
     socket.on('c_request_leaderboard', function () {
-        logger('c_request_leaderboard from ' + connected_player.id);
+        debug_socket('c_request_leaderboard from ' + connected_player.id);
 	socket.emit('s_update_leaderboard',update_leaderboard(connected_player));
     });
 
     socket.on('c_log', function (data) {
-	logger("c_log: ",data);
+	debug_socket("c_log: ",data);
     });
 
     socket.on('disconnect', function () {
-	logger("Got disconnect");
-        logger('User ' + connected_player.id + ' disconnected!');
+	debug("Got disconnect");
+        debug('User ' + connected_player.id + ' disconnected!');
        socket.broadcast.emit('s_player_disc', connected_player);
     });
 
     socket.on('c_request_update_one_player', function (player_id) {
-        logger(`c_request_update_one_player for connected player ${connected_player.id} updating player id ${player_id}`);
+        debug_socket(`c_request_update_one_player for connected player ${connected_player.id} updating player id ${player_id}`);
 	let player_to_send = get_player_by_id(player_id);
 	socket.emit('s_update_clients',player_to_send);
     });
@@ -396,7 +391,7 @@ io.on('connect', function (socket) {
 
 function init_game() {
 
-    logger("init_game");
+    debug("init_game");
     // Initialize "all cells" array for collision detection
 
     init_all_cells();
@@ -419,5 +414,5 @@ setInterval(send_server_status,1000);
 let ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || globals.host;
 let serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || globals.port;
 http.listen( serverport, ipaddress, function() {
-    logger('[DEBUG] Listening on ' + ipaddress + ':' + serverport);
+    debug('Server on ' + ipaddress + ':' + serverport);
 });

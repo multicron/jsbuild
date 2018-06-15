@@ -596,14 +596,16 @@ function init_socket(socket) {
     socket.on('s_update_powerups', function (powerups_from_server) {
 	logger("Got update_powerups");
 
-	let new_powerups = [];
+	// let new_powerups = [];
 
-	powerups_from_server.forEach((powerup) => {
-	    let new_powerup = new PowerUp();
-	    Object.assign(new_powerup,powerup);
-	    new_powerups.push(new_powerup);
-	});
-	powerups = new_powerups;
+	// powerups_from_server.forEach((powerup) => {
+	//     let new_powerup = new PowerUp();
+	//     Object.assign(new_powerup,powerup);
+	//     new_powerups.push(new_powerup);
+	// });
+	// powerups = new_powerups;
+
+	powerups = powerups_from_server;
     });
 
     socket.on('s_update_leaderboard', function (leaders) {

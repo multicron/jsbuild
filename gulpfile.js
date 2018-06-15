@@ -120,7 +120,7 @@ gulp.task('todo', ['lint'], function() {
 gulp.task('run', ['build'], function () {
     process.env.NODE_PATH = "/home/olson/agar.io-clone/src/lib";
     process.env.DEBUG = "express*";
-    process.env.DEBUG = "*,-socket*,-engine*";
+    process.env.DEBUG = "*,-socket*,-engine*,-splines:socket";
     nodemon({
         delay: 10,
         script: './server/server.js',

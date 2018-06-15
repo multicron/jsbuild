@@ -1,7 +1,7 @@
 const constant = require('constant.js');
 const globals = require('globals.js');
 const PowerUp = require('PowerUp.js');
-const debug = require('debug')('splines');
+const debug = require('debug')('splines:Player');
 
 // Player Constructor
 
@@ -90,27 +90,26 @@ module.exports = class Player {
 	    this.alive = 0;
 	}
 	else {
-	    let collision = this.check_collision();
-	    
-	    if (collision) {
-		this.award_collision(this,collision);
-		this.alive = 0;
+	    let hit_object = this.check_collision();
 
-		// if (collision.is_powerup) {
-		//     debug("Got powerup collision");
-		//     collision.used = 1;
-		// }
-		// else if (collision instanceof Player) {
-		//     debug("Got Player Collision");
-		//     this.award_collision(this,collision);
-		//     this.alive = 0;
-		// }
-		// else {
-		//     debug("Got some other collision");
-		// }
+	    // hit_object is false if no collision
+
+	    if (hit_object) {
+		if (hit_object instanceof PowerUp) {
+		    debug("Got PowerUp collision");
+		    this.award_powerup(this,hit_object);
+		    hit_object.alive = 0;
+		}
+		else if (hit_object instanceof Player) {
+		    debug("Got Player Collision");
+		    this.award_collision(hit_object);
+		    this.alive = 0;
+		}
+		else {
+		    debug("Got some other collision");
+		}
 	    }
 	}
-
 
 	if (this.alive) {
 	    // Update all_cells with new position of head
@@ -121,16 +120,20 @@ module.exports = class Player {
     }
     
     
-    award_collision(killed,killer) {
-	killed.killed_by = killer.name;
+    award_collision(killer) {
+	this.killed_by = killer.name;
 
-	let awarded = killed.cells.length - 90;
+	let awarded = this.cells.length - 90;
 	
 	if (awarded > 0) {
 	    killer.size += awarded;
 	}
 	
-	killed.size = 1;
+	this.size = 1;
+    }
+
+    award_powerup(powerup) {
+//	this.powerups.push(powerup);
     }
 
     shift_player() {
