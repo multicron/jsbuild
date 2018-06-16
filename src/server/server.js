@@ -34,6 +34,7 @@ let auth = basic_auth({users: { 'user': 'password' }});
 //app.use(auth);
 app.use(express.static(__dirname + '/../client'));
 
+let tick_count = 0;
 let all_cells = [];
 global.all_cells = all_cells;
 
@@ -106,7 +107,7 @@ function expire_player_powerups() {
 	let powerups = player.powerups;
 	let i = powerups.length;
 	while (i--) {
-	    if (powerups[i].start_time + powerups[i].duration < Date.now()) {
+	    if (powerups[i].end_time < Date.now()) {
 		powerups.splice(i, 1);
 	    } 
 	}
@@ -166,6 +167,8 @@ function tick_game() {
     
     broadcast('s_update_powerups',powerups);
     debug_socket("Sending s_update_powerups");
+
+    tick_count++;
 
     tick_timer.end();
 }
@@ -331,6 +334,7 @@ function patch_socket_io(socket) {
 
 io.on('connect', function (socket) {
     let connected_player;
+    let last_direction_change;
 
     // Not yet used
     let type = socket.handshake.query.type;
@@ -346,21 +350,10 @@ io.on('connect', function (socket) {
     }); 
 
     socket.on('c_change_direction', function (new_dir) {
-        debug_socket('c_change_direction ' + connected_player.id + ' changing direction to ',new_dir);
+        debug(`got c_change_direction from ${connected_player.id} to change direction to ${new_dir}`);
 
-	let old_dir = connected_player.dir;
+	connected_player.queue_direction_change(new_dir);
 
-	if (old_dir == new_dir) {
-	    // Do nothing
-	}
-	else if ((old_dir!=constant.direction.left && old_dir!=constant.direction.right) && (new_dir==constant.direction.left || new_dir==constant.direction.right)) {
-            debug('Changing direction to vertical',new_dir);
-	    connected_player.dir = new_dir;
-	}
-	else if ((old_dir!=constant.direction.up && old_dir!=constant.direction.down) && (new_dir==constant.direction.up || new_dir==constant.direction.down)) {
-            debug('Changing direction to horizontal',new_dir);
-	    connected_player.dir = new_dir;
-	}
     });
 
     // socket.on('c_new_player', function (dash) {

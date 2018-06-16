@@ -6,6 +6,8 @@ module.exports = Object.freeze({
     headcolor: "#FFFFFF",
     dashcolor: "#FF2222",
     edgecolor: "#FF0000",
+    multipliercolor: "#00FF00",
+    scalecolor: "#0000FF",
     smallblocks: 0,
     cellsize: 10,
     delaycount: 0,
@@ -16,7 +18,7 @@ module.exports = Object.freeze({
     safety_time: 800,
     max_name_length: 20,
     rotateview: false,
-    context_alpha: false,
+    context_alpha: true,
     world_dim: {
 	width: 500,
 	height: 350,

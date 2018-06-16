@@ -5,8 +5,7 @@ const globals = require('globals.js');
 
 module.exports = class PowerUp {
     constructor() {
-	this.start_time = Date.now();
-	this.duration = 30000;
+	this.end_time = Date.now() + 30000;
 	this.type = Math.floor(Math.random()*2)+1;
 	this.alive = 1;
 	this.position = {

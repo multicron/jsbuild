@@ -34,6 +34,8 @@ logger = function(...args) {
 
 logger = function() {};
 
+// localStorage.debug = 'splines';
+
 // The whole world and its 2d context
 let board;
 let board_ctx;
@@ -66,6 +68,7 @@ let observer;
 // Screen elements
 let div_server_status = document.createElement('div');
 let div_leaderboard = document.createElement('div');
+let div_scoreboard = document.createElement('div');
 let div_login = document.createElement('div');
 let div_viewport = document.createElement('div');
 
@@ -187,6 +190,29 @@ function init() {
 					     });
 
     div_leaderboard.innerHTML = html.div("Leaderboard");
+
+    div_scoreboard.style.cssText = html.CSS({"background-color": "none",
+					      "color": "white",
+					      opacity: "1",
+//					      display: "inline-block",
+					      display: "flex",          
+					      "font-family": "arial",
+					      "flex-direction": "column", 
+//					      "justify-content": "center",
+					      "align-items": "center",
+					      position: "fixed",
+					      top: 0,
+					      left: 0,
+					      "padding-left": "10px",
+					      width: "20%",
+					      height: "30%",
+					      margin: "auto",
+					      overflow: "auto",
+					      "overflow-x": "hidden",
+					      "overflow-y": "hidden",
+					     });
+
+    div_scoreboard.innerHTML = html.div("Score");
 
     // A div for the entering/exiting overlay
 
@@ -329,6 +355,7 @@ function init() {
     page.appendChild(radar);
     page.appendChild(div_server_status);
     page.appendChild(div_leaderboard);
+    page.appendChild(div_scoreboard);
     page.appendChild(div_login);
 
 
@@ -583,11 +610,22 @@ function init_socket(socket) {
 
     socket.on('s_update_world', function (players_from_server) {
 	logger("Got world update");
+
 	world_changed = true;
+	
 	// Items in the JSON Array of objects received from the server are not instances of Player.
+
+	// This is the intent of the code, but there are dire warnings bout never doing this,
+	// and that we should create a new object with Object.create instead:
+	// 
+	// players_from_server.forEach((player) => {
+	//     Object.setPrototypeOf(player,Player.prototype);
+	// });
+	// players = players_from_server;
+
 	let new_world = [];
 	players_from_server.forEach((player) => {
-	    let new_player = new Player();
+	    let new_player = Object.create(Player.prototype);
 	    Object.assign(new_player,player);
 	    new_world.push(new_player);
 	});
@@ -670,6 +708,22 @@ function fillin_leaderboard(leaders) {
     }));
 }
 
+function fillin_scoreboard(player) {
+    let multiplier_time = (player.get_powerup_time_left(constant.powerup.multiplier) / 1000);
+    let scale_time = (player.get_powerup_time_left(constant.powerup.scale) / 1000);
+
+    return html.JOIN(html.div(player.name),
+		     html.table(html.tr(html.td("Score:"),
+					html.td(player.score)),
+				html.tr(html.td("Pending:"),
+					html.td(Math.max(0,player.pending_score))),
+				html.tr(html.td("Scale:"),
+					html.td(scale_time ? `${player.scale.toPrecision(2)} (${scale_time.toPrecision(3)} secs)` : `${player.scale.toPrecision(2)}`)),
+				html.tr(html.td("Multiplier:"),
+					html.td(multiplier_time ? `2x (${multiplier_time.toPrecision(3)} secs)` : "1x"))
+			       ));
+}
+
 
 
 function draw_axes(ctx) {
@@ -749,6 +803,10 @@ function animate() {
     clear_board();
 
     refresh_timer.start();
+
+    if (viewport_player) {
+	div_scoreboard.innerHTML = fillin_scoreboard(viewport_player);
+    }
 
     players.forEach(player => {
 	refresh_player(player);
@@ -885,11 +943,15 @@ function update_radar() {
 function refresh_powerup(powerup) {
     let cell = powerup.position;
 
-    let color = globals.headcolor;
-
-    board_ctx.fillStyle = color;
-
     if (powerup.type === constant.powerup.multiplier) {
+	board_ctx.fillStyle = globals.multipliercolor;
+
+	board_ctx.fillRect((cell.x*globals.cellsize),
+			    (cell.y*globals.cellsize),
+			    globals.cellsize,
+			    globals.cellsize);
+
+	board_ctx.strokeStyle = globals.bgcolor;
 	board_ctx.beginPath();
 	board_ctx.moveTo((cell.x)*globals.cellsize,
 			 (cell.y)*globals.cellsize);
@@ -902,6 +964,14 @@ function refresh_powerup(powerup) {
 	board_ctx.stroke();
     }
     else if (powerup.type === constant.powerup.scale) {
+	board_ctx.fillStyle = globals.scalecolor;
+
+	board_ctx.fillRect((cell.x*globals.cellsize),
+			    (cell.y*globals.cellsize),
+			    globals.cellsize,
+			    globals.cellsize);
+
+	board_ctx.strokeStyle = globals.bgcolor;
 	board_ctx.beginPath();
 	board_ctx.moveTo((cell.x+0.5)*globals.cellsize,
 			 (cell.y)*globals.cellsize);
@@ -1064,7 +1134,7 @@ function draw_name(p) {
 
     let scale = p.scale;
 
-    board_ctx.font = Math.floor(12*scale) + 'px Verdana';
+    board_ctx.font = p.get_name_size().toString(10) + 'px Verdana';
 
     let name = p.name;
 

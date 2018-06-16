@@ -48,6 +48,7 @@ module.exports = class Player {
 	this.last_cell = 0;
 	this.lines = [];
 	this.powerups = [];
+	this.direction_change_queue = [];
 	this.killed_by = undefined;
     }
 
@@ -57,6 +58,27 @@ module.exports = class Player {
 
     get pending_score() {
 	return Math.floor((this.size - this.cells.length) * 100);
+    }
+
+    queue_direction_change(new_dir) {
+	this.direction_change_queue.push(new_dir);
+    }
+
+    change_direction() {
+	let old_dir = this.dir;
+	let new_dir = this.direction_change_queue.shift();
+
+	if (old_dir == new_dir) {
+	    // Do nothing
+	}
+	else if ((old_dir!=constant.direction.left && old_dir!=constant.direction.right) && (new_dir==constant.direction.left || new_dir==constant.direction.right)) {
+            debug('Changing direction to vertical',new_dir);
+	    this.dir = new_dir;
+	}
+	else if ((old_dir!=constant.direction.up && old_dir!=constant.direction.down) && (new_dir==constant.direction.up || new_dir==constant.direction.down)) {
+            debug('Changing direction to horizontal',new_dir);
+	    this.dir = new_dir;
+	}
     }
 
     get_collision_object(x,y) {
@@ -82,6 +104,9 @@ module.exports = class Player {
 
 	if (this.is_robot) {
 	    this.turn();
+	}
+	else {
+	    this.change_direction();
 	}
 
 	// Change the position of the head
@@ -138,7 +163,7 @@ module.exports = class Player {
     }
 
     award_powerup(powerup) {
-	powerup.start_time = Date.now();
+	powerup.end_time = Date.now() + 30000;
 	this.powerups.push(powerup);
     }
 
@@ -227,11 +252,24 @@ module.exports = class Player {
 	return new_pos;
     }
 
+    get_powerup_time_left(powerup_type) {
+	let now = Date.now();
+	let pups = this.powerups.filter((p) => p.type===powerup_type);
+	let times = pups.map((p) => p.end_time - now);
+	times.push(0); // default value
+	return Math.max.apply(null,times);
+    }
+
     update_viewport_scale() {
 	this.scale = 1 + Math.min(5,((this.size - globals.startsize) / 1000));
 	if (this.scale <= 5 && this.powerups.some((powerup) => powerup.type === constant.powerup.scale) > 0) {
 	    this.scale = this.scale + 0.5;
 	}
+    }
+
+    get_name_size() {
+	let scale = 1 + Math.min(5,((this.size - globals.startsize) / 1000));
+	return Math.floor(12 * scale);
     }
 
     update_shade() {
