@@ -1,4 +1,4 @@
-module.exports = Object.freeze({
+module.exports = {
     host: "0.0.0.0",
     port: 80,
     grid: 0,
@@ -15,7 +15,7 @@ module.exports = Object.freeze({
     startsize: 100,
     minplayers: 70,
     minpowerups: 70,
-    safety_time: 800,
+    safety_time: 8,
     max_name_length: 20,
     rotateview: false,
     context_alpha: true,
@@ -35,4 +35,5 @@ module.exports = Object.freeze({
 	width: 50,
 	height: 35,
     },
-});
+    tick_clock: 0
+};

@@ -127,6 +127,7 @@ function play(event) {
 
     playing = true;
 
+    timeout_cursor_pointer();
 }
 
 function die() {
@@ -376,7 +377,6 @@ function init() {
     window.setInterval(request_latency,1000);
     window.setInterval(update_radar,500);
 
-    mouse_move();
 }
 
 function request_latency() {
@@ -414,6 +414,10 @@ function update_status() {
 function mouse_move(event) {
     div_viewport.style.cursor = "default";
 
+    timeout_cursor_pointer();
+}
+
+function timeout_cursor_pointer() {
     if (clear_cursor_timeout) window.clearTimeout(clear_cursor_timeout);
     clear_cursor_timeout = window.setTimeout(() => {div_viewport.style.cursor = "none"}, 2500);
 }
@@ -603,8 +607,9 @@ function init_socket(socket) {
 	server_status = status;
     });
     
-    socket.on('s_update_client', function (updates) {
+    socket.on('s_update_client', function (tick,updates) {
 	world_changed = true;
+	globals.tick_clock = tick;
 	update_players(updates);
     });
 
@@ -716,7 +721,7 @@ function fillin_scoreboard(player) {
 		     html.table(html.tr(html.td("Score:"),
 					html.td(player.score)),
 				html.tr(html.td("Pending:"),
-					html.td(Math.max(0,player.pending_score))),
+					html.td(player.pending_score)),
 				html.tr(html.td("Scale:"),
 					html.td(scale_time ? `${player.scale.toPrecision(2)} (${scale_time.toPrecision(3)} secs)` : `${player.scale.toPrecision(2)}`)),
 				html.tr(html.td("Multiplier:"),
@@ -1004,7 +1009,7 @@ function refresh_player(p) {
 
     p.lines = cells_to_lines(p.cells);
 
-    if (Date.now() - p.create_time < globals.safety_time) {
+    if (globals.tick_clock - p.create_time < globals.safety_time) {
 	if (p.flashing===1) {
 	    p.lines.forEach((line) => {draw_line(line,shade)});
 	    p.flashing = 0;

@@ -13,7 +13,7 @@ module.exports = class Player {
 	this.name = undefined;
 	this.is_robot = false;
 	this.alive = 1;
-	this.create_time = Date.now();
+	this.create_time = globals.tick_clock;
 	this.dir = Math.floor(Math.random() * 4) + 1;
 	this.dash =  0; // (Math.random() > 0.5);
 	this.speed = 1.0;
@@ -53,7 +53,7 @@ module.exports = class Player {
     }
 
     get score() {
-    	return Math.floor(this.cells.length * 100 + (Date.now() - this.create_time) / 1000);
+    	return Math.floor(this.cells.length * 100  + (globals.tick_clock - this.create_time));
     }
 
     get pending_score() {
@@ -72,11 +72,11 @@ module.exports = class Player {
 	    // Do nothing
 	}
 	else if ((old_dir!=constant.direction.left && old_dir!=constant.direction.right) && (new_dir==constant.direction.left || new_dir==constant.direction.right)) {
-            debug('Changing direction to vertical',new_dir);
+//            debug('Changing direction to vertical',new_dir);
 	    this.dir = new_dir;
 	}
 	else if ((old_dir!=constant.direction.up && old_dir!=constant.direction.down) && (new_dir==constant.direction.up || new_dir==constant.direction.down)) {
-            debug('Changing direction to horizontal',new_dir);
+//            debug('Changing direction to horizontal',new_dir);
 	    this.dir = new_dir;
 	}
     }
@@ -124,12 +124,12 @@ module.exports = class Player {
 
 	    if (hit_object) {
 		if (hit_object instanceof PowerUp) {
-		    debug("Got PowerUp collision");
+//		    debug("Got PowerUp collision");
 		    this.award_powerup(hit_object);
 		    hit_object.alive = 0;
 		}
 		else if (hit_object instanceof Player) {
-		    debug("Got Player Collision");
+//		    debug("Got Player Collision");
 		    this.award_collision(hit_object);
 		    this.alive = 0;
 		}
@@ -150,15 +150,17 @@ module.exports = class Player {
     award_collision(killer) {
 	this.killed_by = killer.name;
 
-	let awarded = this.cells.length - 90;
+	let awarded = Math.max(0,this.cells.length - 90);
 	
 	if (awarded > 0) {
 	    killer.size += awarded;
+	    if (killer.name == "Bluby") debug(`Awarded ${awarded} cells to ${killer.name}`);
 	}
 	if (killer.powerups.some((powerup) => powerup.type === constant.powerup.multiplier)) {
 	    killer.size += awarded;
+	    if (killer.name == "Bluby") debug(`Awarded ${awarded} cells to ${killer.name}`);
 	}
-	
+
 	this.size = 1;
     }
 
@@ -191,10 +193,10 @@ module.exports = class Player {
     check_collision() {
 	let c = this.get_collision_object(this.position.x,this.position.y);
 	
-	if (c===undefined) {
+	if (c === undefined) {
 	    return false;
 	}
-	if (c===0) {
+	if (c === 0) {
 	    return false;
 	}
 	if (c === this) {
@@ -204,11 +206,11 @@ module.exports = class Player {
 	    return false;
 	}
 	// Can't kill anyone for a while after spawning
-	if (Date.now() - c.create_time < globals.safety_time) {
+	if (globals.tick_clock - this.create_time < globals.safety_time) {
 	    return false;
 	}
 	// Can't be killed by anyone for a while after spawning
-	if (Date.now() - this.create_time < globals.safety_time) {
+	if (globals.tick_clock - this.create_time < globals.safety_time) {
 	    return false;
 	}
 
@@ -261,15 +263,16 @@ module.exports = class Player {
     }
 
     update_viewport_scale() {
-	this.scale = 1 + Math.min(5,((this.size - globals.startsize) / 1000));
-	if (this.scale <= 5 && this.powerups.some((powerup) => powerup.type === constant.powerup.scale) > 0) {
-	    this.scale = this.scale + 0.5;
+	this.scale = 1.0 + Math.min(4,((this.size - globals.startsize) / 10000));
+
+	if (this.scale <= 4 && this.powerups.some((powerup) => powerup.type === constant.powerup.scale) > 0) {
+	    this.scale = this.scale + 0.25;
 	}
     }
 
     get_name_size() {
-	let scale = 1 + Math.min(5,((this.size - globals.startsize) / 1000));
-	return Math.floor(12 * scale);
+	let scale = 1 + Math.min(5,((this.size - globals.startsize) / 10000));
+	return Math.floor(13 * scale);
     }
 
     update_shade() {

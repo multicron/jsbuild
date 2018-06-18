@@ -34,7 +34,6 @@ let auth = basic_auth({users: { 'user': 'password' }});
 //app.use(auth);
 app.use(express.static(__dirname + '/../client'));
 
-let tick_count = 0;
 let all_cells = [];
 global.all_cells = all_cells;
 
@@ -168,7 +167,7 @@ function tick_game() {
     broadcast('s_update_powerups',powerups);
     debug_socket("Sending s_update_powerups");
 
-    tick_count++;
+    globals.tick_clock++;
 
     tick_timer.end();
 }
@@ -178,9 +177,9 @@ function volatile_broadcast(name,data) {
     io.sockets.volatile.emit(name,data);
 }
 
-function broadcast(name,data) {
+function broadcast(name,...args) {
 //    debug_socket("io.sockets","broadcast",name,"bytes: ",JSON.stringify(data).length);
-    io.sockets.emit(name,data);
+    io.sockets.emit(name,...args);
 }
 
 function player_in_client_viewport(player,client) {
@@ -220,7 +219,7 @@ function update_clients() {
 	updates.push(new PlayerUpdate(player,3));
     });
 
-    broadcast('s_update_client',updates);
+    broadcast('s_update_client',globals.tick_clock,updates);
     broadcast('s_update_powerups',powerups);
 
 }
