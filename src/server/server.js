@@ -7,6 +7,7 @@ const basic_auth = require('express-basic-auth');
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const debug = require('debug')('splines');
+const clock = require('clock.js');
 const debug_socket = require('debug')('splines:socket');
 
 debug("server.js starting up with NODE_PATH " + process.env.NODE_PATH );
@@ -106,7 +107,7 @@ function expire_player_powerups() {
 	let powerups = player.powerups;
 	let i = powerups.length;
 	while (i--) {
-	    if (powerups[i].end_time < Date.now()) {
+	    if (powerups[i].end_time < clock.time) {
 		powerups.splice(i, 1);
 	    } 
 	}
@@ -167,7 +168,7 @@ function tick_game() {
     broadcast('s_update_powerups',powerups);
     debug_socket("Sending s_update_powerups");
 
-    globals.tick_clock++;
+    clock.time += globals.tick_ms;
 
     tick_timer.end();
 }
@@ -219,7 +220,7 @@ function update_clients() {
 	updates.push(new PlayerUpdate(player,3));
     });
 
-    broadcast('s_update_client',globals.tick_clock,updates);
+    broadcast('s_update_client',clock.time,updates);
     broadcast('s_update_powerups',powerups);
 
 }
@@ -378,7 +379,7 @@ io.on('connect', function (socket) {
     });
 
     socket.on('c_log', function (data) {
-	debug_socket("c_log: ",data);
+	debug("c_log: ",data);
     });
 
     socket.on('disconnect', function () {
@@ -411,7 +412,7 @@ function init_game() {
 
 init_game();
 
-setInterval(tick_game,80);
+setInterval(tick_game,globals.tick_ms);
 setInterval(() => {netmon.run()},1000);
 setInterval(send_server_status,1000);
 

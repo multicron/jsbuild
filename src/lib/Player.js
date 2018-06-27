@@ -1,9 +1,10 @@
 // jshint lastsemic: true
+// jshint browser: true
 
 const constant = require('constant.js');
 const globals = require('globals.js');
 const PowerUp = require('PowerUp.js');
-const debug = require('debug')('splines:Player');
+const clock = require('clock.js');
 
 // Player Constructor
 
@@ -13,7 +14,7 @@ module.exports = class Player {
 	this.name = undefined;
 	this.is_robot = false;
 	this.alive = 1;
-	this.create_time = globals.tick_clock;
+	this.create_time = clock.time;
 	this.dir = Math.floor(Math.random() * 4) + 1;
 	this.dash =  0; // (Math.random() > 0.5);
 	this.speed = 1.0;
@@ -53,7 +54,7 @@ module.exports = class Player {
     }
 
     get score() {
-    	return Math.floor(this.cells.length * 100  + (globals.tick_clock - this.create_time));
+    	return Math.floor(this.cells.length * 100  + (clock.time - this.create_time)/1000);
     }
 
     get pending_score() {
@@ -72,11 +73,9 @@ module.exports = class Player {
 	    // Do nothing
 	}
 	else if ((old_dir!=constant.direction.left && old_dir!=constant.direction.right) && (new_dir==constant.direction.left || new_dir==constant.direction.right)) {
-//            debug('Changing direction to vertical',new_dir);
 	    this.dir = new_dir;
 	}
 	else if ((old_dir!=constant.direction.up && old_dir!=constant.direction.down) && (new_dir==constant.direction.up || new_dir==constant.direction.down)) {
-//            debug('Changing direction to horizontal',new_dir);
 	    this.dir = new_dir;
 	}
     }
@@ -124,17 +123,14 @@ module.exports = class Player {
 
 	    if (hit_object) {
 		if (hit_object instanceof PowerUp) {
-//		    debug("Got PowerUp collision");
 		    this.award_powerup(hit_object);
 		    hit_object.alive = 0;
 		}
 		else if (hit_object instanceof Player) {
-//		    debug("Got Player Collision");
 		    this.award_collision(hit_object);
 		    this.alive = 0;
 		}
 		else {
-		    debug("Got some other collision");
 		}
 	    }
 	}
@@ -154,18 +150,16 @@ module.exports = class Player {
 	
 	if (awarded > 0) {
 	    killer.size += awarded;
-	    if (killer.name == "Bluby") debug(`Awarded ${awarded} cells to ${killer.name}`);
 	}
 	if (killer.powerups.some((powerup) => powerup.type === constant.powerup.multiplier)) {
 	    killer.size += awarded;
-	    if (killer.name == "Bluby") debug(`Awarded ${awarded} cells to ${killer.name}`);
 	}
 
 	this.size = 1;
     }
 
     award_powerup(powerup) {
-	powerup.end_time = Date.now() + 30000;
+	powerup.set_end_time(30000);
 	this.powerups.push(powerup);
     }
 
@@ -206,11 +200,11 @@ module.exports = class Player {
 	    return false;
 	}
 	// Can't kill anyone for a while after spawning
-	if (globals.tick_clock - this.create_time < globals.safety_time) {
+	if (clock.time - this.create_time < globals.safety_time) {
 	    return false;
 	}
 	// Can't be killed by anyone for a while after spawning
-	if (globals.tick_clock - this.create_time < globals.safety_time) {
+	if (clock.time - this.create_time < globals.safety_time) {
 	    return false;
 	}
 
@@ -255,9 +249,9 @@ module.exports = class Player {
     }
 
     get_powerup_time_left(powerup_type) {
-	let now = Date.now();
+	let now = clock.time;
 	let pups = this.powerups.filter((p) => p.type===powerup_type);
-	let times = pups.map((p) => p.end_time - now);
+	let times = pups.map((p) => (p.end_time - now) / 1000);
 	times.push(0); // default value
 	return Math.max.apply(null,times);
     }

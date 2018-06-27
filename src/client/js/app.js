@@ -15,7 +15,8 @@ const Observer = require("Observer.js");
 const Timer = require("Timer.js");
 const crypto = require("crypto");
 const PowerUp = require("PowerUp.js");
-
+const clock = require('clock.js');
+const bless = require('util.js').bless;
 const html = require("Phyper.js");
 
 let socket;
@@ -34,7 +35,7 @@ logger = function(...args) {
 
 logger = function() {};
 
-// localStorage.debug = 'splines';
+//localStorage.debug = 'splines';
 
 // The whole world and its 2d context
 let board;
@@ -85,6 +86,7 @@ let client_status = {};
 let world_updates = 0;
 let player_updates = 0;
 let player_adds = 0;
+
 let world_changed = false;
 let skipped_animations = 0;
 
@@ -157,7 +159,7 @@ function init() {
 						display: "inline-block",
 						position: "fixed",
 						top: 0,
-						left: 0,
+						bottom: 0,
 						"padding-left": "10px",
 						width: "100%",
 						height: "50%",
@@ -394,7 +396,7 @@ function update_status() {
     }
     client_status.num_players = `Number Players (client): ${players.length}`;
     client_status.world_updates = `World Updates: ${world_updates} Player Updates: ${player_updates} Player Adds: ${player_adds}`;
-    client_status.skipped_anim = `Skipped Animations: ${skipped_animations}`;
+    client_status.skipped_anim = `tick_clock: ${clock.time} Skipped Animations: ${skipped_animations}`;
 
     if (socket) {
 	client_status.transport = `Transport: ${socket.io.engine.transport.name}`;
@@ -443,7 +445,7 @@ function key_down(event) {
     let new_dir = keycode_to_dir(event.which);
     if (new_dir) {
 	event.preventDefault();
-	logger("Sending direction change to",new_dir);
+//	logger("Sending direction change to",new_dir);
 	socket.emit('c_change_direction',new_dir);
     }
     else {
@@ -523,18 +525,18 @@ function mouse_pos_to_dir(passed_point) {
 }
 
 function update_player_cells (player,update) {
-    logger("Update_player_cells for Player "+player.id);
+//    logger("Update_player_cells for Player "+player.id);
 
     if (player) {
 	let old_cells = player.cells;
 
 	// Catch the tail up to the server
 
-	logger("player.first_cell " + player.first_cell + ", update.first_cell " + update.first_cell);
-	logger("player.last_cell " + player.last_cell + ", update.last_cell " + update.last_cell);
+//	logger("player.first_cell " + player.first_cell + ", update.first_cell " + update.first_cell);
+//	logger("player.last_cell " + player.last_cell + ", update.last_cell " + update.last_cell);
 
 	while (player.first_cell < update.first_cell) {
-	    logger("Shifting player "+player.first_cell);
+//	    logger("Shifting player "+player.first_cell);
 	    player.cells.shift();
 	    player.first_cell++;
 	}
@@ -548,7 +550,7 @@ function update_player_cells (player,update) {
 		socket.emit('c_request_update_one_player',player.id);
 	    }
 	    else {
-		logger("Adding to player "+num_to_add+" first cell "+first_cell_to_add + " length " + update.last_cells.length);
+//		logger("Adding to player "+num_to_add+" first cell "+first_cell_to_add + " length " + update.last_cells.length);
 		
 		for (let x = first_cell_to_add; x < update.last_cells.length ; x++) {
 		    player.cells.push(update.last_cells[x]);
@@ -609,51 +611,30 @@ function init_socket(socket) {
     
     socket.on('s_update_client', function (tick,updates) {
 	world_changed = true;
-	globals.tick_clock = tick;
+	clock.time = tick;
 	update_players(updates);
     });
 
-    socket.on('s_update_world', function (players_from_server) {
-	logger("Got world update");
+    socket.on('s_update_world', function (new_players) {
+//	logger("Got world update");
 
 	world_changed = true;
 	
-	// Items in the JSON Array of objects received from the server are not instances of Player.
-
-	// This is the intent of the code, but there are dire warnings bout never doing this,
-	// and that we should create a new object with Object.create instead:
-	// 
-	// players_from_server.forEach((player) => {
-	//     Object.setPrototypeOf(player,Player.prototype);
-	// });
-	// players = players_from_server;
-
-	let new_world = [];
-	players_from_server.forEach((player) => {
-	    let new_player = Object.create(Player.prototype);
-	    Object.assign(new_player,player);
-	    new_world.push(new_player);
+	new_players.forEach((player) => {
+	    player.powerups = player.powerups.map((powerup) => bless(powerup, PowerUp.prototype));
 	});
-	players = new_world;
+	
+	players = new_players.map((player) => bless(player, Player.prototype));
     });
 
-    socket.on('s_update_powerups', function (powerups_from_server) {
-	logger("Got update_powerups");
+    socket.on('s_update_powerups', function (new_powerups) {
+//	logger("Got update_powerups");
 
-	// let new_powerups = [];
-
-	// powerups_from_server.forEach((powerup) => {
-	//     let new_powerup = new PowerUp();
-	//     Object.assign(new_powerup,powerup);
-	//     new_powerups.push(new_powerup);
-	// });
-	// powerups = new_powerups;
-
-	powerups = powerups_from_server;
+	powerups = new_powerups.map((powerup) => bless(powerup,PowerUp.prototype));
     });
 
     socket.on('s_update_leaderboard', function (leaders) {
-	logger("Got leaderboard update");
+//	logger("Got leaderboard update");
 	div_leaderboard.innerHTML = fillin_leaderboard(leaders);
     });
 
@@ -714,8 +695,10 @@ function fillin_leaderboard(leaders) {
 }
 
 function fillin_scoreboard(player) {
-    let multiplier_time = (player.get_powerup_time_left(constant.powerup.multiplier) / 1000);
-    let scale_time = (player.get_powerup_time_left(constant.powerup.scale) / 1000);
+    if (!(player instanceof Player)) return "";
+
+    let multiplier_time = (player.get_powerup_time_left(constant.powerup.multiplier));
+    let scale_time = (player.get_powerup_time_left(constant.powerup.scale));
 
     return html.JOIN(html.div(player.name),
 		     html.table(html.tr(html.td("Score:"),
@@ -1009,7 +992,7 @@ function refresh_player(p) {
 
     p.lines = cells_to_lines(p.cells);
 
-    if (globals.tick_clock - p.create_time < globals.safety_time) {
+    if (clock.time - p.create_time < globals.safety_time) {
 	if (p.flashing===1) {
 	    p.lines.forEach((line) => {draw_line(line,shade)});
 	    p.flashing = 0;

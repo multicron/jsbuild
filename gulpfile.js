@@ -13,12 +13,7 @@ var debug = require('gulp-debug');
 var pump = require('pump');
 var path = require('path');
 
-gulp.task('build', ['build-client', 'move-client', 'build-server', 'test']);
-
-gulp.task('test', ['lint'], function () {
-    gulp.src(['test/**/*.js'])
-        .pipe(mocha());
-});
+gulp.task('build', ['build-client', 'move-client', 'build-server']);
 
 gulp.task('lint', function () {
   return gulp.src(['src/**/*.js'])
@@ -60,23 +55,23 @@ gulp.task('build-client', ['lint','babel'], function (cb) {
 		  ]
 	      }
 	  }),
-	  // obfuscator({
-	  //     compact: true,
-	  //     controlFlowFlattening: false,
-	  //     deadCodeInjection: false,
-	  //     debugProtection: false,
-	  //     debugProtectionInterval: false,
-	  //     disableConsoleOutput: true,
-	  //     identifierNamesGenerator: 'hexadecimal',
-	  //     log: false,
-	  //     renameGlobals: false,
-	  //     rotateStringArray: true,
-	  //     selfDefending: true,
-	  //     stringArray: true,
-	  //     stringArrayEncoding: true,
-	  //     stringArrayThreshold: 1.00,
-	  //     unicodeEscapeSequence: false,
-	  // }),
+	  obfuscator({
+	      compact: true,
+	      controlFlowFlattening: false,
+	      deadCodeInjection: false,
+	      debugProtection: false,
+	      debugProtectionInterval: false,
+	      disableConsoleOutput: true,
+	      identifierNamesGenerator: 'hexadecimal',
+	      log: false,
+	      renameGlobals: false,
+	      rotateStringArray: true,
+	      selfDefending: true,
+	      stringArray: true,
+	      stringArrayEncoding: true,
+	      stringArrayThreshold: 1.00,
+	      unicodeEscapeSequence: false,
+	  }),
 	  debug({title:'build-client'}),
 	  gulp.dest('bin/client/js/'),
 	  ],cb);

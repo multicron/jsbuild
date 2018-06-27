@@ -15,7 +15,7 @@ module.exports = {
     startsize: 100,
     minplayers: 70,
     minpowerups: 70,
-    safety_time: 8,
+    safety_time: 800,
     max_name_length: 20,
     rotateview: false,
     context_alpha: true,
@@ -35,5 +35,5 @@ module.exports = {
 	width: 50,
 	height: 35,
     },
-    tick_clock: 0
+    tick_ms: 80
 };
