@@ -1099,6 +1099,9 @@ function draw_head(p) {
     if (p.dash) {
 	color = globals.dashcolor;
     }
+    else if (p.get_powerup_time_left(constant.powerup.multiplier)) {
+	color = globals.multipliercolor;
+    }
 
     board_ctx.fillStyle = color;
 
