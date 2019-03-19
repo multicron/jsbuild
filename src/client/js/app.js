@@ -95,6 +95,7 @@ const anim_timer = new Timer((timer) => {client_status.animate = "animate took "
 const refresh_timer = new Timer((timer) => {client_status.refresh_player = "refresh_player took " + timer.times.join(" ")});
 const viewport_update_timer = new Timer((timer) => {client_status.update_viewport = "update_viewport took " + timer.time + "ms"});
 const update_players_timer = new Timer((timer) => {client_status.update_players = "update_players took " + timer.time + "ms"});
+const radar_update_timer = new Timer((timer) => {client_status.update_radar = "update_radar took " + timer.time + "ms"});
 
 init();
 animate();
@@ -276,21 +277,21 @@ function init() {
     radar.height = (globals.view_dim.height / 4) * globals.cellsize;
 
     radar.style.cssText = html.CSS({"background-color": "blue",
-				    "color": "white",
-				    opacity: "1.0",
-				    display: "inline-block",
-				    position: "fixed",
-				    bottom: 0,
-				    right: 0,
-				    width: (radar.width) + "px",
-				    height: (radar.height) + "px",
-				    margin: "auto",
-				    overflow: "auto",
-				    border: "1px solid white",
-				   });
-
+    				    "color": "white",
+    				    opacity: "1.0",
+    				    display: "inline-block",
+    				    position: "fixed",
+    				    bottom: 0,
+    				    right: 0,
+    				    width: (radar.width) + "px",
+    				    height: (radar.height) + "px",
+    				    margin: "auto",
+    				    overflow: "auto",
+    				    border: "1px solid white",
+    				   });
+    
     radar_ctx = radar.getContext( '2d' , {alpha: globals.context_alpha});
-    radar_ctx.imageSmoothingEnabled = true;
+    radar_ctx.imageSmoothingEnabled = false;
 
     // The entire playing field
 
@@ -377,7 +378,7 @@ function init() {
 
     window.setInterval(request_leaderboard,1000);
     window.setInterval(request_latency,1000);
-    window.setInterval(update_radar,500);
+//    window.setInterval(update_radar,500);
 
 }
 
@@ -667,10 +668,6 @@ function init_socket(socket) {
             document.getElementById('gameAreaWrapper').style.opacity = 0;
             document.getElementById('startMenuWrapper').style.maxHeight = '1000px';
             globals.died = false;
-            if (globals.animLoopHandle) {
-                window.cancelAnimationFrame(globals.animLoopHandle);
-                globals.animLoopHandle = undefined;
-            }
         }, 2500);
     });
 
@@ -812,6 +809,7 @@ function animate() {
 
     if (viewport_player) {
 	update_viewport(viewport_player);
+//	update_radar();
     }
 
     update_status();
@@ -909,6 +907,8 @@ function update_map(p) {
 }
 
 function update_radar() {
+    radar_update_timer.start();
+
     let width = globals.world_dim.width/32;
     let height = globals.world_dim.height/32;
 
@@ -919,13 +919,15 @@ function update_radar() {
     radar_ctx.strokeRect(1, 1, radar_ctx.canvas.width-1, radar_ctx.canvas.height-1);
 
     radar_ctx.drawImage(board,
-			0,0,
-			board.width,
-			board.height,
-			0,0,
-			radar.width,
-			radar.height
-		       );
+    			0,0,
+    			board.width,
+    			board.height,
+    			0,0,
+    			radar.width,
+    			radar.height
+    		       );
+
+    radar_update_timer.end();
 }
 
 function refresh_powerup(powerup) {

@@ -9,6 +9,7 @@ const io = require('socket.io')(http);
 const debug = require('debug')('splines');
 const clock = require('clock.js');
 const debug_socket = require('debug')('splines:socket');
+const fs = require('fs');
 
 debug("server.js starting up with NODE_PATH " + process.env.NODE_PATH );
 
@@ -31,9 +32,68 @@ const NetworkMonitor = require("NetworkMonitor.js");
 
 const Timer = require("Timer.js");
 
-let auth = basic_auth({users: { 'user': 'password' }});
-//app.use(auth);
+// Set up Express application
+
+// Allow using the html library in templates
+
+app.locals.html = html;
+
+// Anything in the static directory is served verbatim
+
 app.use(express.static(__dirname + '/../client'));
+
+// set the view engine to ejs
+app.set('view engine', 'ejs');
+
+// use res.render to load up an ejs view file
+
+// index page 
+//app.get('/', function(req, res) {
+//    res.render('pages/index.ejs');
+//});
+
+// other dynamic pages
+app.get('/:pageId.html', function(req, res) {
+    let pageId = req.params.pageId;
+    if (fs.existsSync(`views/pages/${pageId}.ejs`)) {
+	let pageText = fs.readFileSync(`views/blog/${pageId}.txt`,'utf8');
+	let pageJSON = JSON.parse(fs.readFileSync(`views/blog/${pageId}.json`,'utf8'));
+	pageJSON.pageId = pageId;
+	pageJSON.pageText = pageText;
+	res.render(`pages/${pageId}.ejs`,pageJSON);
+    }
+    else if (fs.existsSync(`views/blog/${pageId}.txt`)) {
+	let pageText = fs.readFileSync(`views/blog/${pageId}.txt`,'utf8');
+	let pageJSON = JSON.parse(fs.readFileSync(`views/blog/${pageId}.json`,'utf8'));
+	pageJSON.pageId = pageId;
+	pageJSON.pageText = pageText;
+	res.render('pages/blog.ejs',pageJSON);
+    }
+    else {
+        res.status(404).send("404 Page not found!");
+    }
+});
+
+app.get('/', function(req, res) {
+    let pageId = 'index';
+    if (fs.existsSync(`views/pages/${pageId}.ejs`)) {
+	res.render(`pages/${pageId}.ejs`);
+    }
+    else if (fs.existsSync(`views/blog/${pageId}.txt`)) {
+	let pageText = fs.readFileSync(`views/blog/${pageId}.txt`,'utf8');
+	let pageJSON = JSON.parse(fs.readFileSync(`views/blog/${pageId}.json`,'utf8'));
+	pageJSON.pageId = pageId;
+	pageJSON.pageText = pageText;
+	res.render('pages/blog.ejs',pageJSON);
+    }
+    else {
+        res.status(404).send("404 Page not found!");
+    }
+});
+
+app.use(function (req, res, next) {
+    res.status(404).send("404 Page not found!");
+});
 
 let all_cells = [];
 global.all_cells = all_cells;
