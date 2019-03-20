@@ -147,13 +147,17 @@ function populate_all_cells() {
 	let p = players[i];
 	if (p.alive) {
 	    for (let j = 0; j< p.cells.length; j++) {
-		all_cells[p.cells[j].x][p.cells[j].y] = p;
-		count++;
+		    all_cells[p.cells[j].x][p.cells[j].y] = p;
+		        count++;
+	        }
 	    }
-	}
     }
     
-    powerups.forEach((powerup) => {all_cells[powerup.position.x][powerup.position.y] = powerup; count2++;});
+    powerups.forEach((powerup) => {
+            all_cells[powerup.position.x][powerup.position.y] = powerup; 
+            count2++;
+            }
+        );
 
     server_status.cell_count = `Total Cells: ${count} Total Power Ups: ${count2}`;
 }
@@ -161,18 +165,18 @@ function populate_all_cells() {
 function remove_dead_players() {
     let i = players.length;
     while (i--) {
-	if (!players[i].alive) {
-	    players.splice(i, 1);
-	} 
+        if (!players[i].alive) {
+            players.splice(i, 1);
+        } 
     }
 }
 
 function remove_dead_powerups() {
     let i = powerups.length;
     while (i--) {
-	if (!powerups[i].alive) {
-	    powerups.splice(i, 1);
-	} 
+        if (!powerups[i].alive) {
+            powerups.splice(i, 1);
+        } 
     }
 }
 
@@ -180,10 +184,10 @@ function expire_player_powerups() {
     players.forEach((player) => {
 	let powerups = player.powerups;
     let i = powerups.length;
-    // Testing git
-	while (i--) {
+
+    while (i--) {
 	    if (powerups[i].end_time < clock.time) {
-		powerups.splice(i, 1);
+            powerups.splice(i, 1);
 	    } 
 	}
     });
