@@ -198,25 +198,26 @@ function tick_game() {
     tick_timer.start();
 
     players.forEach(player => {
-	player.update_viewport_scale();
-	player.update_shade();
-    });
+	    player.update_viewport_scale();
+        player.update_shade();
+        }
+    );
 
     clear_all_cells();
     populate_all_cells();
 
     players.forEach(player => {
-	if (player.alive) {
-	    player.one_step();
-	}
+	    if (player.alive) {
+	        player.one_step();
+	    }
     });
 
     // Dashing players
 
     players.forEach(player => {
-	if (player.dash && player.alive) {
-	    player.one_step();
-	}
+	    if (player.dash && player.alive) {
+	        player.one_step();
+	    }
     });
 
     // Dashing players at scale > 4.0
@@ -234,14 +235,14 @@ function tick_game() {
     expire_player_powerups();
 
     while (players.length < globals.minplayers) {
-	let player = add_robot();
-	debug_socket("Sending s_update_one_player");
-	broadcast('s_update_one_player',player);
+	    let player = add_robot();
+	    debug_socket("Sending s_update_one_player");
+	    broadcast('s_update_one_player',player);
     }
     server_status.num_players = `Number Players (server): ${players.length} Connected sockets: ${Object.keys(sockets).filter((k) => sockets[k].connected).length}`;
 
     while (powerups.length < globals.minpowerups) {
-    	let powerup = add_powerup();
+    	add_powerup();
     }
     
     broadcast('s_update_powerups',powerups);
