@@ -165,7 +165,8 @@ function remove_dead_powerups() {
 function expire_player_powerups() {
     players.forEach((player) => {
 	let powerups = player.powerups;
-	let i = powerups.length;
+    let i = powerups.length;
+    // Testing git
 	while (i--) {
 	    if (powerups[i].end_time < clock.time) {
 		powerups.splice(i, 1);
