@@ -116,7 +116,6 @@ setInterval(() => { netmon.run() }, 1000);
 setInterval(send_server_status, 1000);
 
 
-// Don't touch, IP configurations.
 let ipaddress = process.env.OPENSHIFT_NODEJS_IP || process.env.IP || globals.host;
 let serverport = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || globals.port;
 http.listen(serverport, ipaddress, function () {
